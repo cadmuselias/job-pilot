@@ -1,0 +1,59 @@
+{
+  "version": 1,
+  "skills": {
+    "architect": {
+      "source": "JavaScript-Mastery-Pro/jsm-agent-skill",
+      "sourceType": "github",
+      "skillPath": "skills/architect/SKILL.md",
+      "computedHash": "686bd8b5606ad628da5cceced15b9c5155bff8f1666c7f8d0cd498fdd34dbb3f"
+    },
+    "imprint": {
+      "source": "JavaScript-Mastery-Pro/jsm-agent-skill",
+      "sourceType": "github",
+      "skillPath": "skills/imprint/SKILL.md",
+      "computedHash": "ee690f88ca7b099220f8f895b12ef84ed7a2e1a1ce988d92ccd82fac4cfe3e36"
+    },
+    "insforge": {
+      "source": "insforge/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/insforge/SKILL.md",
+      "computedHash": "aa9eff7d98c2e6e7e60a31af427f02c6dc2ee5da554c585962e3ddc841fd0dd2"
+    },
+    "insforge-cli": {
+      "source": "insforge/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/insforge-cli/SKILL.md",
+      "computedHash": "2b213072d9760022bbd24b3f7a61c319f94277ab8e976c2d6af49d14025d90d6"
+    },
+    "insforge-debug": {
+      "source": "insforge/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/insforge-debug/SKILL.md",
+      "computedHash": "d675f9b9aa8929642ec007238ae40ba429080a5d8c21777cf18fa8d240f7dca2"
+    },
+    "insforge-integrations": {
+      "source": "insforge/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/insforge-integrations/SKILL.md",
+      "computedHash": "efb9988e0872e731be136b9b9156484ee2fc789e287fc9934aa3d59872c61681"
+    },
+    "recover": {
+      "source": "JavaScript-Mastery-Pro/jsm-agent-skill",
+      "sourceType": "github",
+      "skillPath": "skills/recover/SKILL.md",
+      "computedHash": "d789f53babb890247275f793cd72eac3295159819db878fdae5f1dbd21ff7d83"
+    },
+    "remember": {
+      "source": "JavaScript-Mastery-Pro/jsm-agent-skill",
+      "sourceType": "github",
+      "skillPath": "skills/remember/SKILL.md",
+      "computedHash": "5ab74d5ccf24c96c61292920fd980341b97846f52114710e18c519923cf874a1"
+    },
+    "review": {
+      "source": "JavaScript-Mastery-Pro/jsm-agent-skill",
+      "sourceType": "github",
+      "skillPath": "skills/review/SKILL.md",
+      "computedHash": "8838f4c248a8145dc9758a477ec4d6e9889b4a5ce96a60f85e5b54470bf0ff27"
+    }
+  }
+}

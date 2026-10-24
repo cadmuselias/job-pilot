@@ -140,19 +140,20 @@ Last updated: 2026-10-24
 
 | Property | Class |
 |---|---|
-| Background | `bg-surface` (card), `bg-surface-secondary/20` (drop zone), `bg-accent-muted/40` (drag-over), `bg-accent-muted` (cloud icon badge), `bg-success-lightest` (uploaded pill / extraction success), `bg-error/10` (error banner), `bg-accent` (extract & generate buttons) |
-| Border | `border-border` (card/select button), `border-2 border-dashed border-border-muted` (drop zone), `border-success-light` (pill / extraction success), `border-error/20` (error banner) |
+| Background | `bg-surface` (card), `bg-surface-secondary/20` (drop zone), `bg-accent-muted/40` (drag-over), `bg-accent-muted` (cloud icon badge), `bg-success-lightest` (uploaded pill / extraction success / generation success), `bg-error/10` (error banner), `bg-accent` (extract & generate buttons) |
+| Border | `border-border` (card/select button), `border-2 border-dashed border-border-muted` (drop zone), `border-success-light` (pill / extraction success / generation success), `border-error/20` (error banner) |
 | Border radius | `rounded-2xl` (card), `rounded-xl` (drop zone), `rounded-full` (cloud badge), `rounded-lg` (buttons, error/success banners, pill) |
 | Text — primary | `text-text-primary` (`text-base font-semibold` heading, `text-sm font-semibold` drop title) |
-| Text — secondary | `text-text-secondary` (`text-sm`), `text-text-muted` (`text-xs` / `text-[11px]`), `text-error` (error message), `text-success` (uploaded indicator / success message) |
+| Text — secondary | `text-text-secondary` (`text-sm`), `text-text-muted` (`text-xs` / `text-[11px]`), `text-error` (error message / remove button), `text-success` (uploaded indicator / success message) |
 | Spacing | `p-6` (card), `py-8 px-6` (drop zone), `gap-2` / `gap-3` (badge & actions), `mt-6 pt-5` (generation row) |
-| Hover state | `hover:border-accent/40` (drop zone), `hover:bg-surface-secondary` (select button), `hover:bg-accent-dark` (extract & generate buttons), `hover:underline` (View link), `hover:text-text-primary` (Replace button) |
-| Shadow | `shadow-xs` (card, select button, extract button), `shadow-sm` (generate button) |
-| Accent usage | `text-accent` (upload cloud icon, View link), `bg-accent` / `hover:bg-accent-dark` (extract & generate buttons), `bg-accent-muted` (icon badge) |
+| Hover state | `hover:border-accent/40` (drop zone), `hover:bg-surface-secondary` (select button), `hover:bg-accent-dark` (extract & generate buttons), `hover:underline` (View & Download links), `hover:text-text-primary` (Replace button), `hover:text-error/80` (Remove button) |
+| Shadow | `shadow-xs` (card, select button, extract button, generate button) |
+| Accent usage | `text-accent` (upload cloud icon, View link, Download action), `bg-accent` / `hover:bg-accent-dark` (extract & generate buttons), `bg-accent-muted` (icon badge) |
 
 **Pattern notes:**
 - Drag-and-drop zone dynamically switches border to `border-accent` and background to `bg-accent-muted/40` on dragover.
-- Secondary action button uses `bg-surface` with `border-border`; primary AI extraction & generation buttons use solid `bg-accent` with micro-scaling (`active:scale-[0.99]`).
+- Active resume confirmation pill displays filename with discrete contextual action triggers: `View` (opens PDF in new tab), `Download` (client-side blob download with spinner), `Replace` (re-triggers file selector), and `Remove` (purges file from InsForge Storage and database).
+- Primary AI extraction and PDF generation CTAs use solid `bg-accent` with micro-scaling (`active:scale-[0.99]`) and spinner transitions during async operations.
 - Success confirmation banner and pill use `bg-success-lightest` with `border-success-light` and `text-success`.
 - Error banner renders `bg-error/10` with `border-error/20` and embeds an inline `Log in` action link when authorization fails.
 

@@ -136,23 +136,25 @@ Last updated: 2026-10-20
 ### ResumeUpload
 
 File: `components/profile/ResumeUpload.tsx`
-Last updated: 2026-10-20
+Last updated: 2026-10-24
 
 | Property | Class |
 |---|---|
-| Background | `bg-surface` (card), `bg-surface-secondary/20` (drop zone), `bg-accent-muted/40` (drag-over), `bg-accent-muted` (cloud icon badge), `bg-accent` (generate button) |
-| Border | `border-border` (card/select button), `border-2 border-dashed border-border-muted` (drop zone) |
-| Border radius | `rounded-2xl` (card), `rounded-xl` (drop zone), `rounded-full` (cloud badge), `rounded-lg` (buttons) |
+| Background | `bg-surface` (card), `bg-surface-secondary/20` (drop zone), `bg-accent-muted/40` (drag-over), `bg-accent-muted` (cloud icon badge), `bg-success-lightest` (uploaded pill), `bg-error/10` (error banner), `bg-accent` (generate button) |
+| Border | `border-border` (card/select button), `border-2 border-dashed border-border-muted` (drop zone), `border-success-light` (pill), `border-error/20` (error banner) |
+| Border radius | `rounded-2xl` (card), `rounded-xl` (drop zone), `rounded-full` (cloud badge), `rounded-lg` (buttons, error banner, pill) |
 | Text — primary | `text-text-primary` (`text-base font-semibold` heading, `text-sm font-semibold` drop title) |
-| Text — secondary | `text-text-secondary` (`text-sm`), `text-text-muted` (`text-xs` file constraint) |
-| Spacing | `p-6` (card), `py-10 px-6` (drop zone), `mt-5`, `mt-6 pt-5` (generation row) |
-| Hover state | `hover:border-accent/40` (drop zone), `hover:bg-surface-secondary` (select button), `hover:bg-accent-dark` (generate button) |
+| Text — secondary | `text-text-secondary` (`text-sm`), `text-text-muted` (`text-xs` file constraint), `text-error` (error message), `text-success` (uploaded indicator) |
+| Spacing | `p-6` (card), `py-10 px-6` (drop zone), `mt-5`, `mt-3` (banner), `mt-4` (pill), `mt-6 pt-5` (generation row) |
+| Hover state | `hover:border-accent/40` (drop zone), `hover:bg-surface-secondary` (select button), `hover:bg-accent-dark` (generate button), `hover:underline` (View link), `hover:text-text-primary` (Replace button) |
 | Shadow | `shadow-xs` (card & select button), `shadow-sm` (generate button) |
-| Accent usage | `text-accent` (upload cloud icon), `bg-accent` / `hover:bg-accent-dark` (generate button), `bg-accent-muted` (icon badge) |
+| Accent usage | `text-accent` (upload cloud icon, View link), `bg-accent` / `hover:bg-accent-dark` (generate button), `bg-accent-muted` (icon badge) |
 
 **Pattern notes:**
 - Drag-and-drop state dynamically switches border to `border-accent` and background to `bg-accent-muted/40`.
 - Secondary action button uses `bg-surface` with `border-border`; primary AI generation button uses solid `bg-accent` with `FileText` icon.
+- Success confirmation banner uses `bg-success-lightest` with `border-success-light` and `text-success` pill styling.
+- Error banner renders `bg-error/10` with `border-error/20` and embeds an inline `Log in` action link when authorization fails.
 
 ---
 
@@ -220,5 +222,22 @@ Last updated: 2026-10-20
 **Pattern notes:**
 - Mirrors the exact 3-tier card layout of the profile page (CompletionIndicator, ResumeUpload, ProfileForm) to eliminate layout shift during server streaming.
 
+---
 
+### ProfileView & Extraction Controls
 
+File: `components/profile/ProfileView.tsx`, `components/profile/ResumeUpload.tsx`, `components/profile/ProfileForm.tsx`
+Last updated: 2026-10-24
+
+| Property | Class |
+|---|---|
+| Extract CTA Button | `inline-flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-dark transition-all shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.99]` |
+| Extraction Notice Banner | `flex items-start justify-between gap-3 text-sm text-accent bg-accent-muted/40 border border-accent/30 p-4 rounded-xl` |
+| Extraction Success Badge | `flex items-center gap-2 text-xs text-success bg-success-lightest border border-success-light px-3.5 py-2 rounded-lg max-w-md w-full` |
+| Extraction Error Badge | `flex items-center gap-2 text-xs text-error bg-error/10 border border-error/20 px-3.5 py-2 rounded-lg max-w-md w-full` |
+
+**Pattern notes:**
+- AI extraction action button appears dynamically when a resume file is uploaded or present.
+- Uses `Sparkles` icon and loading state with `Loader2 animate-spin`.
+- Client wrapper `ProfileView` coordinates smart merging and triggers key-based remounting of `ProfileForm` without cascading `useEffect` renders.
+- Highlights populated form inputs with a dismissible accent banner reminding users to review and save.

@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { GoogleGenAI } from "@google/genai";
+import { PDFParse } from "pdf-parse";
 import { createInsforgeServer } from "@/lib/insforge-server";
 import { createPostHogServer } from "@/lib/posthog-server";
 import { calculateProfileCompletion } from "@/lib/utils";
@@ -15,6 +17,36 @@ export type SaveProfileResult = {
 export type UploadResumeResult = {
   success: boolean;
   url?: string;
+  error?: string;
+};
+
+export type ExtractedProfileData = {
+  fullName?: string;
+  email?: string;
+  phone?: string;
+  location?: string;
+  linkedinUrl?: string;
+  portfolioUrl?: string;
+  workAuthorization?: string;
+  currentTitle?: string;
+  experienceLevel?: string;
+  yearsExperience?: string | number;
+  skills?: string[];
+  industries?: string[];
+  workExperience?: WorkExperienceItem[];
+  highestDegree?: string;
+  fieldOfStudy?: string;
+  institution?: string;
+  graduationYear?: string | number;
+  jobTitlesSeeking?: string;
+  remotePreference?: string;
+  salaryExpectation?: string;
+  preferredLocations?: string;
+};
+
+export type ExtractResumeResult = {
+  success: boolean;
+  data?: ExtractedProfileData;
   error?: string;
 };
 
@@ -269,5 +301,144 @@ export async function uploadResume(formData: FormData): Promise<UploadResumeResu
   } catch (error) {
     console.error("[actions/profile] Unexpected error in uploadResume:", error);
     return { success: false, error: "An unexpected error occurred while uploading resume." };
+  }
+}
+
+export async function extractResumeAction(
+  formData?: FormData
+): Promise<ExtractResumeResult> {
+  try {
+    const insforge = await createInsforgeServer();
+    const {
+      data: authData,
+      error: authError,
+    } = await insforge.auth.getCurrentUser();
+
+    if (authError || !authData?.user) {
+      return { success: false, error: "Unauthorized. Please log in again." };
+    }
+
+    const user = authData.user;
+    let buffer: Buffer;
+
+    const file = formData?.get("resume") as File | null;
+    if (file && file.size > 0) {
+      const arrayBuffer = await file.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+    } else {
+      // Download current active resume from InsForge storage
+      const storagePath = `${user.id}/resume.pdf`;
+      const { data: fileBlob, error: downloadError } = await insforge.storage
+        .from("resumes")
+        .download(storagePath);
+
+      if (downloadError || !fileBlob) {
+        return {
+          success: false,
+          error: "No uploaded resume found. Please upload a PDF resume first.",
+        };
+      }
+
+      const arrayBuffer = await fileBlob.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+    }
+
+    // Extract text using PDFParse
+    let rawText = "";
+    try {
+      const parser = new PDFParse({ data: buffer });
+      const parseResult = await parser.getText();
+      rawText = (parseResult.text || "").trim();
+      await parser.destroy();
+    } catch (parseError) {
+      console.error("[actions/profile] PDFParse failed:", parseError);
+      return {
+        success: false,
+        error:
+          "Could not extract text from this PDF. Please try a different file.",
+      };
+    }
+
+    if (!rawText || rawText.length < 50) {
+      return {
+        success: false,
+        error:
+          "Could not extract text from this PDF. Please try a different file.",
+      };
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return {
+        success: false,
+        error: "AI service is not configured. Missing GEMINI_API_KEY.",
+      };
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
+
+    const prompt = `You are an expert AI resume parser for JobPilot.
+Analyze the provided resume text and extract all relevant candidate profile fields into the exact JSON format specified below.
+
+Extraction Guidelines:
+- fullName: candidate's name (string)
+- email: email address (string or null if not found)
+- phone: phone number (string or null if not found)
+- location: location (e.g. "San Francisco, CA" or "Berlin, Germany")
+- linkedinUrl: full LinkedIn profile URL (string or null)
+- portfolioUrl: portfolio or GitHub URL (string or null)
+- currentTitle: candidate's most recent or prominent job title
+- experienceLevel: categorize into exactly one of: "junior", "mid", "senior", "lead"
+- yearsExperience: estimated total years of relevant work experience (number or string)
+- skills: array of technical and professional skills as concise strings (e.g. ["React", "TypeScript", "Node.js"])
+- industries: array of relevant industries (e.g. ["Technology", "FinTech", "SaaS"])
+- workExperience: array of up to 3 most recent work experiences, with:
+    - company: string
+    - title: string
+    - startDate: string (e.g. "Jan 2022")
+    - endDate: string (e.g. "Dec 2023" or leave empty if currently working)
+    - current: boolean
+    - responsibilities: string (2-3 concise bullet-point style sentences describing achievements)
+- highestDegree: categorize into one of: "high_school", "bachelors", "masters", "phd", "other"
+- fieldOfStudy: degree field or major (e.g. "Computer Science")
+- institution: name of university or educational institution
+- graduationYear: year of graduation (e.g. "2021")
+- jobTitlesSeeking: comma-separated string of roles candidate is targeting (e.g. "Frontend Engineer, Full Stack Developer")
+- remotePreference: one of: "remote", "hybrid", "onsite", "any"
+
+Resume Content:
+${rawText}
+
+Return ONLY valid JSON with keys matching the specifications above.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+      },
+    });
+
+    let extractedData: ExtractedProfileData;
+    try {
+      extractedData = JSON.parse(response.text || "{}");
+    } catch {
+      const cleaned = (response.text || "")
+        .replace(/^```json/m, "")
+        .replace(/```$/m, "")
+        .trim();
+      extractedData = JSON.parse(cleaned);
+    }
+
+    return {
+      success: true,
+      data: extractedData,
+    };
+  } catch (error) {
+    console.error("[actions/profile] Error in extractResumeAction:", error);
+    return {
+      success: false,
+      error: "An unexpected error occurred while analyzing the resume.",
+    };
   }
 }

@@ -7,8 +7,8 @@ Update this file after every completed feature. Any AI agent reading this should
 ## Current Status
 
 **Phase:** Phase 2 — Profile Page
-**Last completed:** 06 Profile Save Logic
-**Next:** 07 AI Profile Extraction from Resume
+**Last completed:** 07 AI Profile Extraction from Resume
+**Next:** 08 Resume PDF Generation from Profile
 
 ---
 
@@ -25,7 +25,7 @@ Update this file after every completed feature. Any AI agent reading this should
 
 - [x] 05 Profile Page — Full UI
 - [x] 06 Profile Save Logic
-- [ ] 07 AI Profile Extraction from Resume
+- [x] 07 AI Profile Extraction from Resume
 - [ ] 08 Resume PDF Generation from Profile
 
 ### Phase 3 — Find Jobs Page
@@ -72,6 +72,11 @@ Update this file after every completed feature. Any AI agent reading this should
   - Removed dummy fallback data from `app/profile/page.tsx` so actual user profile state or accurate empty state is always displayed.
   - Created completion calculation utility `calculateProfileCompletion` in `jp/lib/utils.ts` and exported `MATCH_THRESHOLD = 70`.
   - Configured Next.js 16 Partial Prerendering on `/profile` with a `<Suspense>` boundary and a custom `ProfileSkeleton` placeholder.
+- Feature 07 (AI Profile Extraction from Resume):
+  - Implemented `extractResumeAction` in `jp/actions/profile.ts`: verifies user auth, downloads resume PDF buffer from InsForge Storage (`resumes/{user.id}/resume.pdf`) or receives uploaded file, extracts text via `pdf-parse`, validates length (>50 chars), and calls Google Gemini (`gemini-3-flash-preview` via `@google/genai`) with structured JSON schema prompt.
+  - Added "Extract from Resume" CTA button in `jp/components/profile/ResumeUpload.tsx` with loading spinner, disabled state, and error/success messaging.
+  - Created `jp/components/profile/ProfileView.tsx` to coordinate client state between `ResumeUpload` and `ProfileForm` using an idiomatic key-based re-render with smart field merging (existing OAuth info and filled fields preserved if omitted in resume).
+  - Added an informative notification banner in `jp/components/profile/ProfileForm.tsx` alerting the user that fields were populated from their resume and ready for review and saving.
 
 ---
 

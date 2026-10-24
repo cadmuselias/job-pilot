@@ -1,14 +1,22 @@
 "use client";
 
 import { useState, useRef, type DragEvent, type ChangeEvent } from "react";
-import { UploadCloud, FileText, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
-import { uploadResume } from "@/actions/profile";
+import {
+  UploadCloud,
+  FileText,
+  CheckCircle2,
+  Loader2,
+  AlertCircle,
+  Sparkles,
+} from "lucide-react";
+import { uploadResume, extractResumeAction, type ExtractedProfileData } from "@/actions/profile";
 
 type ResumeUploadProps = {
   currentResumeUrl?: string | null;
   onFileSelect?: (file: File) => void;
   onUploadSuccess?: (url: string) => void;
   onGenerateClick?: () => void;
+  onExtractSuccess?: (data: ExtractedProfileData) => void;
 };
 
 export function ResumeUpload({
@@ -16,10 +24,14 @@ export function ResumeUpload({
   onFileSelect,
   onUploadSuccess,
   onGenerateClick,
+  onExtractSuccess,
 }: ResumeUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [extractError, setExtractError] = useState<string | null>(null);
+  const [extractSuccess, setExtractSuccess] = useState(false);
   const [activeResumeUrl, setActiveResumeUrl] = useState<string | null>(
     currentResumeUrl ?? null
   );
@@ -104,8 +116,29 @@ export function ResumeUpload({
     }
   };
 
+  const handleExtract = async () => {
+    setExtractError(null);
+    setExtractSuccess(false);
+    setIsExtracting(true);
+
+    try {
+      const res = await extractResumeAction();
+      if (res.success && res.data) {
+        setExtractSuccess(true);
+        onExtractSuccess?.(res.data);
+      } else {
+        setExtractError(res.error || "Failed to extract profile information.");
+      }
+    } catch (err) {
+      console.error("[ResumeUpload] Extraction error:", err);
+      setExtractError("An unexpected error occurred during extraction.");
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
   const handleSelectResumeClick = () => {
-    if (!isUploading) {
+    if (!isUploading && !isExtracting) {
       fileInputRef.current?.click();
     }
   };
@@ -126,7 +159,7 @@ export function ResumeUpload({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`relative mt-5 border-2 border-dashed rounded-xl py-10 px-6 flex flex-col items-center justify-center text-center transition-colors ${
+        className={`relative mt-5 border-2 border-dashed rounded-xl py-8 px-6 flex flex-col items-center justify-center text-center transition-colors ${
           isDragging
             ? "border-accent bg-accent-muted/40"
             : "border-border-muted hover:border-accent/40 bg-surface-secondary/20"
@@ -137,7 +170,7 @@ export function ResumeUpload({
           type="file"
           accept=".pdf,application/pdf"
           onChange={handleFileInputChange}
-          disabled={isUploading}
+          disabled={isUploading || isExtracting}
           className="hidden"
           id="resume-file-input"
         />
@@ -177,30 +210,74 @@ export function ResumeUpload({
           </div>
         )}
 
-        {/* Selected file confirmation */}
-        {selectedFileName && !isUploading && (
-          <div className="mt-4 flex items-center gap-2 text-xs font-medium text-success bg-success-lightest px-3 py-1.5 rounded-lg border border-success-light">
+        {/* Extraction error banner */}
+        {extractError && (
+          <div className="mt-3 flex items-center gap-2 text-xs text-error bg-error/10 border border-error/20 px-3.5 py-2 rounded-lg max-w-md w-full">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{extractError}</span>
+          </div>
+        )}
+
+        {/* Extraction success banner */}
+        {extractSuccess && !isExtracting && (
+          <div className="mt-3 flex items-center gap-2 text-xs text-success bg-success-lightest border border-success-light px-3.5 py-2 rounded-lg max-w-md w-full">
             <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
-            <span className="truncate max-w-[220px] sm:max-w-[320px]">
-              Uploaded: {selectedFileName}
-            </span>
-            {activeResumeUrl && (
-              <a
-                href={activeResumeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="ml-2 text-accent hover:underline cursor-pointer font-medium shrink-0"
+            <span>Profile fields populated from resume! Review below and click Save Profile.</span>
+          </div>
+        )}
+
+        {/* Selected file confirmation & Extract button */}
+        {selectedFileName && !isUploading && (
+          <div className="mt-4 flex flex-col items-center gap-3">
+            <div className="flex items-center gap-2 text-xs font-medium text-success bg-success-lightest px-3 py-1.5 rounded-lg border border-success-light">
+              <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+              <span className="truncate max-w-[220px] sm:max-w-[320px]">
+                Uploaded: {selectedFileName}
+              </span>
+              {activeResumeUrl && (
+                <a
+                  href={activeResumeUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="ml-2 text-accent hover:underline cursor-pointer font-medium shrink-0"
+                >
+                  View
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={handleSelectResumeClick}
+                disabled={isExtracting}
+                className="ml-2 underline text-text-secondary hover:text-text-primary cursor-pointer shrink-0 disabled:opacity-50"
               >
-                View
-              </a>
-            )}
-            <button
-              type="button"
-              onClick={handleSelectResumeClick}
-              className="ml-2 underline text-text-secondary hover:text-text-primary cursor-pointer shrink-0"
-            >
-              Replace
-            </button>
+                Replace
+              </button>
+            </div>
+
+            {/* Extract from Resume CTA Button */}
+            <div className="flex flex-col items-center gap-1.5 pt-1">
+              <button
+                type="button"
+                onClick={handleExtract}
+                disabled={isExtracting}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-dark transition-all shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.99]"
+              >
+                {isExtracting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-white" />
+                    <span>Analyzing resume with AI...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 text-white" />
+                    <span>Extract from Resume</span>
+                  </>
+                )}
+              </button>
+              <p className="text-[11px] text-text-muted">
+                AI will read your PDF and auto-fill the profile form fields below.
+              </p>
+            </div>
           </div>
         )}
 

@@ -9,9 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@google/genai": "^2.31.0",
     "@insforge/sdk": "^1.5.2",
+    "@types/pdf-parse": "^1.1.5",
     "lucide-react": "^1.57.0",
     "next": "16.4.0",
+    "pdf-parse": "^2.4.5",
     "posthog-js": "^1.438.12",
     "posthog-node": "^5.56.1",
     "react": "19.3.0",

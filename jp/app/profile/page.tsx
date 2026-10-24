@@ -2,8 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Navbar } from "@/components/layout/Navbar";
 import { CompletionIndicator } from "@/components/profile/CompletionIndicator";
-import { ResumeUpload } from "@/components/profile/ResumeUpload";
-import { ProfileForm } from "@/components/profile/ProfileForm";
+import { ProfileView } from "@/components/profile/ProfileView";
 import { createInsforgeServer } from "@/lib/insforge-server";
 import { calculateProfileCompletion } from "@/lib/utils";
 import type { Profile } from "@/types";
@@ -158,10 +157,10 @@ async function ProfileContent() {
         completionPercentage={completion.percentage}
         missingFields={completion.missingFields}
       />
-      <ResumeUpload currentResumeUrl={profile?.resume_pdf_url ?? null} />
-      <ProfileForm
-        key={profile?.updated_at || "initial"}
+      <ProfileView
+        currentResumeUrl={profile?.resume_pdf_url ?? null}
         initialData={initialData}
+        formKey={profile?.updated_at || "initial"}
       />
     </>
   );

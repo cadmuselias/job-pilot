@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, type FormEvent, type KeyboardEvent } from "react";
-import { ChevronDown, Calendar, Plus, X, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  ChevronDown,
+  Calendar,
+  Plus,
+  X,
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  Sparkles,
+} from "lucide-react";
 import { saveProfile } from "@/actions/profile";
 
 type ProfileFormProps = {
@@ -35,10 +44,12 @@ type ProfileFormProps = {
     salaryExpectation?: string;
     preferredLocations?: string;
   };
+  isExtracted?: boolean;
   onSave?: (data: unknown) => void;
 };
 
-export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
+export function ProfileForm({ initialData, isExtracted, onSave }: ProfileFormProps) {
+  const [showExtractedBanner, setShowExtractedBanner] = useState(Boolean(isExtracted));
   // Personal Info state
   const [fullName, setFullName] = useState(initialData?.fullName ?? "Faizan Ali");
   const [email, setEmail] = useState(initialData?.email ?? "faizan@jsmastery.pro");
@@ -120,6 +131,7 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
 
   // Skills handlers
   const handleAddSkill = () => {
@@ -253,6 +265,31 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
           This context is used to accurately represent you in agent interactions.
         </p>
       </div>
+
+      {/* AI Extraction Feedback Banner */}
+      {showExtractedBanner && (
+        <div className="mt-4 flex items-start justify-between gap-3 text-sm text-accent bg-accent-muted/40 border border-accent/30 p-4 rounded-xl">
+          <div className="flex items-start gap-3">
+            <Sparkles className="w-5 h-5 text-accent shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-text-primary text-sm">
+                Profile Auto-Filled from Resume
+              </p>
+              <p className="text-xs text-text-secondary mt-0.5">
+                AI extracted your details into the fields below. Please review each section, make any necessary edits, and click <strong>Save Profile</strong> when ready.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowExtractedBanner(false)}
+            className="text-text-muted hover:text-text-primary cursor-pointer p-1 rounded-md"
+            aria-label="Dismiss banner"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       <hr className="border-border my-6" />
 

@@ -73,10 +73,13 @@ Update this file after every completed feature. Any AI agent reading this should
   - Created completion calculation utility `calculateProfileCompletion` in `jp/lib/utils.ts` and exported `MATCH_THRESHOLD = 70`.
   - Configured Next.js 16 Partial Prerendering on `/profile` with a `<Suspense>` boundary and a custom `ProfileSkeleton` placeholder.
 - Feature 07 (AI Profile Extraction from Resume):
-  - Implemented `extractResumeAction` in `jp/actions/profile.ts`: verifies user auth, downloads resume PDF buffer from InsForge Storage (`resumes/{user.id}/resume.pdf`) or receives uploaded file, extracts text via `pdf-parse`, validates length (>50 chars), and calls Google Gemini (`gemini-3-flash-preview` via `@google/genai`) with structured JSON schema prompt.
+  - Implemented `extractResumeAction` in `jp/actions/profile.ts`: verifies user auth, extracts PDF text via `pdf-parse`, and calls Google Gemini (`gemini-3-flash-preview` via `@google/genai`) with structured JSON schema prompt.
+  - Multi-tier PDF source resolution: parses incoming in-memory `FormData`, falls back to `profile.resume_pdf_url`, then generates fresh signed URL from InsForge Storage (`resumes/{user.id}/resume.pdf`), then falls back to `storage.download()`.
+  - Added Gemini multimodal PDF fallback (`inlineData: { mimeType: 'application/pdf', data: base64 }`) ensuring robust extraction even if PDF text parsing fails due to complex/image PDF formatting.
   - Added "Extract from Resume" CTA button in `jp/components/profile/ResumeUpload.tsx` with loading spinner, disabled state, and error/success messaging.
   - Created `jp/components/profile/ProfileView.tsx` to coordinate client state between `ResumeUpload` and `ProfileForm` using an idiomatic key-based re-render with smart field merging (existing OAuth info and filled fields preserved if omitted in resume).
   - Added an informative notification banner in `jp/components/profile/ProfileForm.tsx` alerting the user that fields were populated from their resume and ready for review and saving.
+  - Imprinted UI patterns to `context/ui-registry.md` and passed 3-layer `/review` audit with zero issues. Next.js 16 production build verified.
 
 ---
 

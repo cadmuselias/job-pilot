@@ -97,7 +97,14 @@ export function ProfileView({
         currentResumeUrl={activeResumeUrl}
         onExtractSuccess={handleExtractSuccess}
         onGenerateSuccess={handleGenerateSuccess}
-        onUploadSuccess={(url) => setActiveResumeUrl(url)}
+        onRemoveSuccess={() => {
+          setActiveResumeUrl(null);
+          router.refresh();
+        }}
+        onUploadSuccess={(url) => {
+          setActiveResumeUrl(url || null);
+          router.refresh();
+        }}
       />
       <ProfileForm
         key={`${formKey || "profile-form"}-v${extractVersion}`}

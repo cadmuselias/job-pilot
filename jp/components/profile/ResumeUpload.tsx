@@ -8,7 +8,7 @@ import {
   AlertCircle,
   Sparkles,
 } from "lucide-react";
-import { uploadResume, extractResumeAction, type ExtractedProfileData } from "@/actions/profile";
+import { uploadResume, extractResumeAction, deleteResumeAction, type ExtractedProfileData } from "@/actions/profile";
 
 type ResumeUploadProps = {
   currentResumeUrl?: string | null;
@@ -16,6 +16,7 @@ type ResumeUploadProps = {
   onUploadSuccess?: (url: string) => void;
   onGenerateClick?: () => void;
   onGenerateSuccess?: (url: string) => void;
+  onRemoveSuccess?: () => void;
   onExtractSuccess?: (data: ExtractedProfileData) => void;
 };
 
@@ -25,6 +26,7 @@ export function ResumeUpload({
   onUploadSuccess,
   onGenerateClick,
   onGenerateSuccess,
+  onRemoveSuccess,
   onExtractSuccess,
 }: ResumeUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
@@ -38,6 +40,8 @@ export function ResumeUpload({
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [generateSuccess, setGenerateSuccess] = useState(false);
+
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [activeResumeUrl, setActiveResumeUrl] = useState<string | null>(
     currentResumeUrl ?? null
@@ -189,8 +193,38 @@ export function ResumeUpload({
     }
   };
 
+  const handleRemoveResume = async () => {
+    setUploadError(null);
+    setExtractError(null);
+    setGenerateError(null);
+    setExtractSuccess(false);
+    setGenerateSuccess(false);
+    setIsDeleting(true);
+
+    try {
+      const res = await deleteResumeAction();
+      if (res.success) {
+        setSelectedFile(null);
+        setSelectedFileName(null);
+        setActiveResumeUrl(null);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
+        onRemoveSuccess?.();
+        onUploadSuccess?.("");
+      } else {
+        setUploadError(res.error || "Failed to remove resume.");
+      }
+    } catch (err) {
+      console.error("[ResumeUpload] Delete error:", err);
+      setUploadError("An unexpected error occurred while removing resume.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleSelectResumeClick = () => {
-    if (!isUploading && !isExtracting && !isGenerating) {
+    if (!isUploading && !isExtracting && !isGenerating && !isDeleting) {
       fileInputRef.current?.click();
     }
   };
@@ -316,20 +350,28 @@ export function ResumeUpload({
               <button
                 type="button"
                 onClick={handleSelectResumeClick}
-                disabled={isExtracting || isGenerating}
+                disabled={isExtracting || isGenerating || isDeleting}
                 className="ml-2 underline text-text-secondary hover:text-text-primary cursor-pointer shrink-0 disabled:opacity-50"
               >
                 Replace
               </button>
+              <button
+                type="button"
+                onClick={handleRemoveResume}
+                disabled={isExtracting || isGenerating || isDeleting}
+                className="ml-2 underline text-error hover:text-error/80 cursor-pointer shrink-0 disabled:opacity-50"
+              >
+                {isDeleting ? "Removing..." : "Remove"}
+              </button>
             </div>
 
             {/* Extract from Resume CTA Button (only shown for non-generated resumes or when raw file uploaded) */}
-            {selectedFile && (
+            {(selectedFile || activeResumeUrl) && !selectedFileName?.startsWith("Generated") && (
               <div className="flex flex-col items-center gap-1.5 pt-1">
                 <button
                   type="button"
                   onClick={handleExtract}
-                  disabled={isExtracting || isGenerating}
+                  disabled={isExtracting || isGenerating || isDeleting}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-dark transition-all shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.99]"
                 >
                   {isExtracting ? (
@@ -356,7 +398,7 @@ export function ResumeUpload({
           <button
             type="button"
             onClick={handleSelectResumeClick}
-            disabled={isGenerating}
+            disabled={isGenerating || isDeleting}
             className="mt-4 bg-surface hover:bg-surface-secondary text-text-primary border border-border px-4 py-2 rounded-lg text-sm font-medium shadow-xs transition-colors cursor-pointer disabled:opacity-60"
           >
             Select Resume
@@ -377,7 +419,7 @@ export function ResumeUpload({
         <button
           type="button"
           onClick={handleGenerateResume}
-          disabled={isGenerating || isUploading || isExtracting}
+          disabled={isGenerating || isUploading || isExtracting || isDeleting}
           className="bg-accent hover:bg-accent-dark text-white text-sm font-medium px-4 py-2 rounded-lg shadow-xs inline-flex items-center justify-center gap-2 transition-all active:scale-[0.99] cursor-pointer shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isGenerating ? (

@@ -20,6 +20,11 @@ export type UploadResumeResult = {
   error?: string;
 };
 
+export type DeleteResumeResult = {
+  success: boolean;
+  error?: string;
+};
+
 export type ExtractedProfileData = {
   fullName?: string;
   email?: string;
@@ -301,6 +306,50 @@ export async function uploadResume(formData: FormData): Promise<UploadResumeResu
   } catch (error) {
     console.error("[actions/profile] Unexpected error in uploadResume:", error);
     return { success: false, error: "An unexpected error occurred while uploading resume." };
+  }
+}
+
+export async function deleteResumeAction(): Promise<DeleteResumeResult> {
+  try {
+    const insforge = await createInsforgeServer();
+    const {
+      data: authData,
+      error: authError,
+    } = await insforge.auth.getCurrentUser();
+
+    if (authError || !authData?.user) {
+      return { success: false, error: "Unauthorized. Please log in again." };
+    }
+
+    const user = authData.user;
+    const storagePath = `${user.id}/resume.pdf`;
+
+    // Attempt to remove file from InsForge Storage bucket 'resumes'
+    try {
+      await insforge.storage.from("resumes").remove(storagePath);
+    } catch (storageErr) {
+      console.warn("[actions/profile] Warning during storage file removal:", storageErr);
+    }
+
+    // Clear resume_pdf_url on profile
+    const { error: dbError } = await insforge.database
+      .from("profiles")
+      .update({
+        resume_pdf_url: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", user.id);
+
+    if (dbError) {
+      console.error("[actions/profile] Failed to clear resume_pdf_url in DB:", dbError);
+      return { success: false, error: "Failed to update profile record." };
+    }
+
+    revalidatePath("/profile");
+    return { success: true };
+  } catch (error) {
+    console.error("[actions/profile] Unexpected error in deleteResumeAction:", error);
+    return { success: false, error: "An unexpected error occurred while deleting resume." };
   }
 }
 

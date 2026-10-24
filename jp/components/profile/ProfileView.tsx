@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { ResumeUpload } from "./ResumeUpload";
 import { ProfileForm } from "./ProfileForm";
 import type { ExtractedProfileData } from "@/actions/profile";
@@ -19,6 +20,10 @@ export function ProfileView({
   initialData,
   formKey,
 }: ProfileViewProps) {
+  const router = useRouter();
+  const [activeResumeUrl, setActiveResumeUrl] = useState<string | null>(
+    currentResumeUrl
+  );
   const [extractedData, setExtractedData] =
     useState<ExtractedProfileData | null>(null);
   const [extractVersion, setExtractVersion] = useState(0);
@@ -26,6 +31,11 @@ export function ProfileView({
   const handleExtractSuccess = (data: ExtractedProfileData) => {
     setExtractedData(data);
     setExtractVersion((v) => v + 1);
+  };
+
+  const handleGenerateSuccess = (url: string) => {
+    setActiveResumeUrl(url);
+    router.refresh();
   };
 
   // Smart merge initialData with extractedData
@@ -84,8 +94,10 @@ export function ProfileView({
   return (
     <>
       <ResumeUpload
-        currentResumeUrl={currentResumeUrl}
+        currentResumeUrl={activeResumeUrl}
         onExtractSuccess={handleExtractSuccess}
+        onGenerateSuccess={handleGenerateSuccess}
+        onUploadSuccess={(url) => setActiveResumeUrl(url)}
       />
       <ProfileForm
         key={`${formKey || "profile-form"}-v${extractVersion}`}

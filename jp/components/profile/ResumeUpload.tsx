@@ -3,7 +3,6 @@
 import { useState, useRef, type DragEvent, type ChangeEvent } from "react";
 import {
   UploadCloud,
-  FileText,
   CheckCircle2,
   Loader2,
   AlertCircle,
@@ -16,6 +15,7 @@ type ResumeUploadProps = {
   onFileSelect?: (file: File) => void;
   onUploadSuccess?: (url: string) => void;
   onGenerateClick?: () => void;
+  onGenerateSuccess?: (url: string) => void;
   onExtractSuccess?: (data: ExtractedProfileData) => void;
 };
 
@@ -24,14 +24,21 @@ export function ResumeUpload({
   onFileSelect,
   onUploadSuccess,
   onGenerateClick,
+  onGenerateSuccess,
   onExtractSuccess,
 }: ResumeUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractError, setExtractError] = useState<string | null>(null);
   const [extractSuccess, setExtractSuccess] = useState(false);
+
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+  const [generateSuccess, setGenerateSuccess] = useState(false);
+
   const [activeResumeUrl, setActiveResumeUrl] = useState<string | null>(
     currentResumeUrl ?? null
   );
@@ -43,6 +50,8 @@ export function ResumeUpload({
 
   const processUpload = async (file: File) => {
     setUploadError(null);
+    setGenerateError(null);
+    setGenerateSuccess(false);
 
     const isPdf =
       file.type === "application/pdf" ||
@@ -103,7 +112,7 @@ export function ResumeUpload({
     e.stopPropagation();
     setIsDragging(false);
 
-    if (isUploading) return;
+    if (isUploading || isGenerating) return;
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
@@ -121,6 +130,8 @@ export function ResumeUpload({
   const handleExtract = async () => {
     setExtractError(null);
     setExtractSuccess(false);
+    setGenerateError(null);
+    setGenerateSuccess(false);
     setIsExtracting(true);
 
     try {
@@ -144,8 +155,42 @@ export function ResumeUpload({
     }
   };
 
+  const handleGenerateResume = async () => {
+    setGenerateError(null);
+    setGenerateSuccess(false);
+    setUploadError(null);
+    setExtractError(null);
+    setIsGenerating(true);
+
+    try {
+      onGenerateClick?.();
+
+      const res = await fetch("/api/resume/generate", {
+        method: "POST",
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success && data.url) {
+        setGenerateSuccess(true);
+        setActiveResumeUrl(data.url);
+        setSelectedFileName("Generated_Resume.pdf");
+        setSelectedFile(null);
+        onGenerateSuccess?.(data.url);
+        onUploadSuccess?.(data.url);
+      } else {
+        setGenerateError(data.error || "Failed to generate resume.");
+      }
+    } catch (err) {
+      console.error("[ResumeUpload] Generation error:", err);
+      setGenerateError("An unexpected error occurred while generating resume.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleSelectResumeClick = () => {
-    if (!isUploading && !isExtracting) {
+    if (!isUploading && !isExtracting && !isGenerating) {
       fileInputRef.current?.click();
     }
   };
@@ -177,7 +222,7 @@ export function ResumeUpload({
           type="file"
           accept=".pdf,application/pdf"
           onChange={handleFileInputChange}
-          disabled={isUploading || isExtracting}
+          disabled={isUploading || isExtracting || isGenerating}
           className="hidden"
           id="resume-file-input"
         />
@@ -233,13 +278,30 @@ export function ResumeUpload({
           </div>
         )}
 
+        {/* Generation error banner */}
+        {generateError && (
+          <div className="mt-3 flex items-center gap-2 text-xs text-error bg-error/10 border border-error/20 px-3.5 py-2 rounded-lg max-w-md w-full">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{generateError}</span>
+          </div>
+        )}
+
+        {/* Generation success banner */}
+        {generateSuccess && !isGenerating && (
+          <div className="mt-3 flex items-center gap-2 text-xs text-success bg-success-lightest border border-success-light px-3.5 py-2 rounded-lg max-w-md w-full">
+            <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
+            <span>Resume successfully generated from your profile and saved!</span>
+          </div>
+        )}
+
         {/* Selected file confirmation & Extract button */}
         {selectedFileName && !isUploading && (
           <div className="mt-4 flex flex-col items-center gap-3">
             <div className="flex items-center gap-2 text-xs font-medium text-success bg-success-lightest px-3 py-1.5 rounded-lg border border-success-light">
               <CheckCircle2 className="w-4 h-4 text-success shrink-0" />
               <span className="truncate max-w-[220px] sm:max-w-[320px]">
-                Uploaded: {selectedFileName}
+                {selectedFileName.startsWith("Generated") ? "Active: " : "Uploaded: "}
+                {selectedFileName}
               </span>
               {activeResumeUrl && (
                 <a
@@ -254,37 +316,39 @@ export function ResumeUpload({
               <button
                 type="button"
                 onClick={handleSelectResumeClick}
-                disabled={isExtracting}
+                disabled={isExtracting || isGenerating}
                 className="ml-2 underline text-text-secondary hover:text-text-primary cursor-pointer shrink-0 disabled:opacity-50"
               >
                 Replace
               </button>
             </div>
 
-            {/* Extract from Resume CTA Button */}
-            <div className="flex flex-col items-center gap-1.5 pt-1">
-              <button
-                type="button"
-                onClick={handleExtract}
-                disabled={isExtracting}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-dark transition-all shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.99]"
-              >
-                {isExtracting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin text-white" />
-                    <span>Analyzing resume with AI...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 text-white" />
-                    <span>Extract from Resume</span>
-                  </>
-                )}
-              </button>
-              <p className="text-[11px] text-text-muted">
-                AI will read your PDF and auto-fill the profile form fields below.
-              </p>
-            </div>
+            {/* Extract from Resume CTA Button (only shown for non-generated resumes or when raw file uploaded) */}
+            {selectedFile && (
+              <div className="flex flex-col items-center gap-1.5 pt-1">
+                <button
+                  type="button"
+                  onClick={handleExtract}
+                  disabled={isExtracting || isGenerating}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-dark transition-all shadow-xs cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.99]"
+                >
+                  {isExtracting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      <span>Analyzing resume with AI...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 text-white" />
+                      <span>Extract from Resume</span>
+                    </>
+                  )}
+                </button>
+                <p className="text-[11px] text-text-muted">
+                  AI will read your PDF and auto-fill the profile form fields below.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -292,7 +356,8 @@ export function ResumeUpload({
           <button
             type="button"
             onClick={handleSelectResumeClick}
-            className="mt-4 bg-surface hover:bg-surface-secondary text-text-primary border border-border px-4 py-2 rounded-lg text-sm font-medium shadow-xs transition-colors cursor-pointer"
+            disabled={isGenerating}
+            className="mt-4 bg-surface hover:bg-surface-secondary text-text-primary border border-border px-4 py-2 rounded-lg text-sm font-medium shadow-xs transition-colors cursor-pointer disabled:opacity-60"
           >
             Select Resume
           </button>
@@ -301,16 +366,31 @@ export function ResumeUpload({
 
       {/* Generation CTA Row */}
       <div className="mt-6 pt-5 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <span className="text-sm text-text-secondary">
-          Need a fresh document based on the fields below?
-        </span>
+        <div>
+          <span className="text-sm font-medium text-text-primary block">
+            Generate Resume with AI
+          </span>
+          <span className="text-xs text-text-secondary mt-0.5 block">
+            Compiles your saved profile into an ATS-optimized single-page PDF.
+          </span>
+        </div>
         <button
           type="button"
-          onClick={onGenerateClick}
-          className="bg-accent hover:bg-accent-dark text-white text-sm font-medium px-4 py-2 rounded-lg shadow-xs inline-flex items-center justify-center gap-2 transition-all active:scale-[0.99] cursor-pointer shrink-0"
+          onClick={handleGenerateResume}
+          disabled={isGenerating || isUploading || isExtracting}
+          className="bg-accent hover:bg-accent-dark text-white text-sm font-medium px-4 py-2 rounded-lg shadow-xs inline-flex items-center justify-center gap-2 transition-all active:scale-[0.99] cursor-pointer shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <FileText className="w-4 h-4" />
-          <span>Generate Resume from Profile</span>
+          {isGenerating ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
+              <span>Polishing with AI...</span>
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4 text-white" />
+              <span>Generate Resume from Profile</span>
+            </>
+          )}
         </button>
       </div>
     </section>

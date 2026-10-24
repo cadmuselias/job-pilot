@@ -6,9 +6,9 @@ Update this file after every completed feature. Any AI agent reading this should
 
 ## Current Status
 
-**Phase:** Phase 2 — Profile Page
-**Last completed:** 07 AI Profile Extraction from Resume
-**Next:** 08 Resume PDF Generation from Profile
+**Phase:** Phase 3 — Find Jobs Page
+**Last completed:** 08 Resume PDF Generation from Profile
+**Next:** 09 Find Jobs Page — Full UI
 
 ---
 
@@ -26,7 +26,7 @@ Update this file after every completed feature. Any AI agent reading this should
 - [x] 05 Profile Page — Full UI
 - [x] 06 Profile Save Logic
 - [x] 07 AI Profile Extraction from Resume
-- [ ] 08 Resume PDF Generation from Profile
+- [x] 08 Resume PDF Generation from Profile
 
 ### Phase 3 — Find Jobs Page
 
@@ -80,6 +80,14 @@ Update this file after every completed feature. Any AI agent reading this should
   - Created `jp/components/profile/ProfileView.tsx` to coordinate client state between `ResumeUpload` and `ProfileForm` using an idiomatic key-based re-render with smart field merging (existing OAuth info and filled fields preserved if omitted in resume).
   - Added an informative notification banner in `jp/components/profile/ProfileForm.tsx` alerting the user that fields were populated from their resume and ready for review and saving.
   - Imprinted UI patterns to `context/ui-registry.md` and passed 3-layer `/review` audit with zero issues. Next.js 16 production build verified.
+- Feature 08 (Resume PDF Generation from Profile):
+  - Created dedicated Next.js API Route Handler at `app/api/resume/generate/route.ts` with Node.js runtime and authenticated InsForge SSR server client.
+  - Built ATS-optimized single-page PDF template in `jp/lib/pdf/ResumeTemplate.tsx` using `@react-pdf/renderer` strictly adhering to supported properties (`Helvetica`, standard typography, contact bar, summary, competencies, experience bullets, education).
+  - Implemented early validation guardrail requiring candidate full name and either work experience or skills before invoking generation.
+  - Gemini AI editorial enhancement: rewrites raw profile data into concise executive summary and achievement-oriented work experience bullets with strict JSON output.
+  - Graceful raw profile fallback: if Gemini encounters rate limits or transient errors, safely compiles the PDF using raw profile fields without failing generation.
+  - Server-side PDF compilation: renders binary buffer via `renderToBuffer()`, converts to type-safe `File` via `Uint8Array`, uploads directly to InsForge Storage (`resumes/{user_id}/resume.pdf` with `upsert: true`), resolves signed/public URL, and persists `resume_pdf_url` on `profiles`.
+  - UI reactive integration in `ResumeUpload.tsx` & `ProfileView.tsx`: provides "Generate Resume from Profile" action, loading indicator ("Polishing with AI..."), error/success banners, and immediate active document link ("View" / "Replace"). Next.js router revalidation triggered.
 
 ---
 

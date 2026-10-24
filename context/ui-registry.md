@@ -246,3 +246,25 @@ Last updated: 2026-10-24
 - Standard banner pattern for AI-assisted fill notifications.
 - Dismiss button uses subtle icon padding (`p-1 rounded-md text-text-muted hover:text-text-primary cursor-pointer`).
 - Accommodates a title, explanatory text, and bold action callout.
+
+---
+
+### ResumeGenerateAction
+
+File: `components/profile/ResumeUpload.tsx`
+Last updated: 2026-10-24
+
+| Property | Class |
+|---|---|
+| Container | `mt-6 pt-5 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4` |
+| Text — title | `text-sm font-medium text-text-primary block` |
+| Text — subtitle | `text-xs text-text-secondary mt-0.5 block` |
+| Button — primary | `bg-accent hover:bg-accent-dark text-white text-sm font-medium px-4 py-2 rounded-lg shadow-xs inline-flex items-center justify-center gap-2 transition-all active:scale-[0.99] cursor-pointer shrink-0 disabled:opacity-60 disabled:cursor-not-allowed` |
+| Success banner | `text-xs text-success bg-success-lightest border border-success-light px-3.5 py-2 rounded-lg max-w-md w-full flex items-center gap-2` |
+| Error banner | `text-xs text-error bg-error/10 border border-error/20 px-3.5 py-2 rounded-lg max-w-md w-full flex items-center gap-2` |
+| Icon | `w-4 h-4 text-white` (Sparkles), `w-4 h-4 animate-spin text-white` (Loader2) |
+
+**Pattern notes:**
+- Bottom card CTA row with explanatory text on the left and primary action button on the right.
+- Visual loading feedback with rotating spinner and label transition ("Polishing with AI...").
+- Integrated success/error banners maintaining strict token adherence without raw colors.

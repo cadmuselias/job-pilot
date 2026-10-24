@@ -22,6 +22,31 @@ export interface EducationItem {
   year: string | number;
 }
 
+export interface ProfileFormData {
+  fullName: string;
+  email: string;
+  phone: string;
+  location: string;
+  linkedinUrl: string;
+  portfolioUrl: string;
+  workAuthorization: WorkAuthorization | string;
+  currentTitle: string;
+  experienceLevel: ExperienceLevel | string;
+  yearsExperience: string | number;
+  skills: string[];
+  industries: string[];
+  roles: WorkExperienceItem[];
+  highestDegree: string;
+  fieldOfStudy: string;
+  institution: string;
+  graduationYear: string | number;
+  jobTitlesSeeking: string;
+  remotePreference: RemotePreference | string;
+  salaryExpectation: string;
+  preferredLocations: string;
+  coverLetterTone?: CoverLetterTone | string;
+}
+
 export interface Profile {
   id: string;
   full_name: string | null;

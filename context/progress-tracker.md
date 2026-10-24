@@ -7,8 +7,8 @@ Update this file after every completed feature. Any AI agent reading this should
 ## Current Status
 
 **Phase:** Phase 2 — Profile Page
-**Last completed:** 04 Database Schema
-**Next:** 05 Profile Page — Full UI
+**Last completed:** 06 Profile Save Logic
+**Next:** 07 AI Profile Extraction from Resume
 
 ---
 
@@ -23,8 +23,8 @@ Update this file after every completed feature. Any AI agent reading this should
 
 ### Phase 2 — Profile Page
 
-- [ ] 05 Profile Page — Full UI
-- [ ] 06 Profile Save Logic
+- [x] 05 Profile Page — Full UI
+- [x] 06 Profile Save Logic
 - [ ] 07 AI Profile Extraction from Resume
 - [ ] 08 Resume PDF Generation from Profile
 
@@ -63,6 +63,15 @@ Update this file after every completed feature. Any AI agent reading this should
   - Added indexes for user lookups, statuses, and job search sort fields (`found_at`, `match_score`).
   - Implemented `handle_updated_at` trigger for auto-updating `updated_at` timestamp on `profiles`.
   - Exported global TypeScript interfaces in `jp/types/index.ts`.
+- Feature 06 (Profile Save Logic):
+  - Created `jp/lib/insforge-server.ts` utilizing `createServerClient` from `@insforge/sdk/ssr` with Next.js cookie integration and URL decoding for authenticated server-side operations.
+  - Implemented `saveProfile` Server Action in `jp/actions/profile.ts` with structured upsert to the `profiles` table, dynamic completion score calculation, and PostHog `profile_completed` trigger for first-time completion.
+  - Implemented `uploadResume` Server Action in `jp/actions/profile.ts` with immediate upload to InsForge Storage (`resumes/{user_id}/resume.pdf`), generating a 7-day signed URL (`createSignedUrl`) for the private bucket and updating `resume_pdf_url` on the profile record.
+  - Enhanced `AuthProvider.tsx` to restore session from `insforge_access_token` cookie on reload, query `/api/auth/sessions/current` directly to populate in-memory `TokenManager`, and prevent premature cookie clearance.
+  - Updated `ResumeUpload.tsx` error handling to cleanly revert file state on error and display a login action banner when unauthorized.
+  - Removed dummy fallback data from `app/profile/page.tsx` so actual user profile state or accurate empty state is always displayed.
+  - Created completion calculation utility `calculateProfileCompletion` in `jp/lib/utils.ts` and exported `MATCH_THRESHOLD = 70`.
+  - Configured Next.js 16 Partial Prerendering on `/profile` with a `<Suspense>` boundary and a custom `ProfileSkeleton` placeholder.
 
 ---
 

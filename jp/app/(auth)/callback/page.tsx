@@ -36,7 +36,11 @@ function CallbackHandler() {
           return;
         }
 
-        window.location.href = returnTo;
+        const target =
+          returnTo.startsWith("/login") || returnTo === "/callback"
+            ? "/dashboard"
+            : returnTo;
+        window.location.href = target;
       } catch (err) {
         if (!isMounted) return;
         const msg = err instanceof Error ? err.message : "Unexpected error during authentication callback";

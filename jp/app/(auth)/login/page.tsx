@@ -1,27 +1,38 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Check, Lock, Sparkles } from "lucide-react";
 
 import { useAuth } from "@/components/auth/AuthProvider";
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = searchParams.get("returnTo") || "/";
 
   const { user, loading: authLoading, signInWithOAuth } = useAuth();
   const [submittingProvider, setSubmittingProvider] = useState<"google" | "github" | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const redirectedRef = useRef(false);
 
   useEffect(() => {
-    if (!authLoading && user) {
-      window.location.href = returnTo;
+    if (!authLoading && user && !redirectedRef.current) {
+      const hasCookie =
+        typeof document !== "undefined" &&
+        document.cookie.includes("insforge_access_token=");
+
+      if (hasCookie) {
+        redirectedRef.current = true;
+        const target =
+          returnTo.startsWith("/login") || returnTo === "/callback"
+            ? "/dashboard"
+            : returnTo;
+        window.location.href = target;
+      }
     }
-  }, [user, authLoading, router, returnTo]);
+  }, [user, authLoading, returnTo]);
 
   const handleOAuthSignIn = async (provider: "google" | "github") => {
     try {

@@ -34,6 +34,12 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function getAuthCookie(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp("(^|;\\s*)insforge_access_token=([^;]*)"));
+  return match ? decodeURIComponent(match[2]) : null;
+}
+
 function syncAuthCookie(accessToken: string | null): void {
   if (typeof document === "undefined") return;
   if (accessToken) {
@@ -92,21 +98,99 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = useCallback(async (): Promise<UserSchema | null> => {
     try {
+      const clientAny = insforge as unknown as {
+        tokenManager?: {
+          getAccessToken?: () => string | null;
+          getSession?: () => { accessToken?: string } | null;
+          saveSession?: (session: { accessToken: string; user: UserSchema }) => void;
+        };
+      };
+
+      let activeToken =
+        clientAny.tokenManager?.getAccessToken?.() ||
+        clientAny.tokenManager?.getSession?.()?.accessToken ||
+        null;
+
+      const cookieToken = getAuthCookie();
+
+      // If client has no token in memory, but a cookie exists, seed the client
+      if (!activeToken && cookieToken) {
+        insforge.setAccessToken(cookieToken);
+        activeToken = cookieToken;
+      }
+
+      // If we have an active token, fetch user directly from backend sessions endpoint
+      if (activeToken) {
+        try {
+          const baseUrl = process.env.NEXT_PUBLIC_INSFORGE_URL;
+          const anonKey = process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY;
+          const res = await fetch(`${baseUrl}/api/auth/sessions/current`, {
+            headers: {
+              Authorization: `Bearer ${activeToken}`,
+              apikey: anonKey || "",
+            },
+          });
+
+          if (res.ok) {
+            const sessionData = await res.json();
+            if (sessionData?.user) {
+              const u = sessionData.user;
+              clientAny.tokenManager?.saveSession?.({
+                accessToken: activeToken,
+                user: u,
+              });
+              syncAuthCookie(activeToken);
+              identifyUser(u);
+              setUser(u);
+              return u;
+            }
+          } else if (res.status === 401) {
+            // Token is explicitly expired or invalid
+            resetPostHog();
+            setUser(null);
+            syncAuthCookie(null);
+            return null;
+          }
+        } catch (fetchErr) {
+          console.warn("[AuthProvider] Session verification network issue:", fetchErr);
+        }
+      }
+
       const { data, error } = await insforge.auth.getCurrentUser();
-      if (error || !data?.user) {
+
+      if (data?.user) {
+        if (!activeToken) {
+          activeToken =
+            clientAny.tokenManager?.getAccessToken?.() ||
+            clientAny.tokenManager?.getSession?.()?.accessToken ||
+            cookieToken;
+        }
+
+        if (activeToken) {
+          syncAuthCookie(activeToken);
+        }
+        identifyUser(data.user);
+        setUser(data.user);
+        return data.user;
+      }
+
+      // Only clear cookie if server explicitly returned an unauthorized error
+      // or if there is no token anywhere.
+      const isExplicitUnauthorized =
+        error &&
+        (error.statusCode === 401 ||
+          error.message?.toLowerCase().includes("unauthorized") ||
+          error.message?.toLowerCase().includes("jwt expired"));
+
+      if (isExplicitUnauthorized || (!cookieToken && !activeToken)) {
         resetPostHog();
         setUser(null);
         syncAuthCookie(null);
         return null;
       }
 
-      identifyUser(data.user);
-      setUser(data.user);
-      return data.user;
+      return null;
     } catch {
-      resetPostHog();
-      setUser(null);
-      syncAuthCookie(null);
       return null;
     } finally {
       setLoading(false);
@@ -118,6 +202,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const initializeAuth = async () => {
       if (isMounted) {
+        const cookieToken = getAuthCookie();
+        if (cookieToken) {
+          insforge.setAccessToken(cookieToken);
+        }
         await refreshUser();
       }
     };

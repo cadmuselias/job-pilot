@@ -110,8 +110,115 @@ Last updated: 2026-10-16
 | Shadow | `shadow-sm` |
 | Accent usage | `border-accent` (spinner) |
 
+### CompletionIndicator
+
+File: `components/profile/CompletionIndicator.tsx`
+Last updated: 2026-10-20
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (card), `bg-error/5` (missing field badges) |
+| Border | `border-border` (card), `border-error/30` (badge), `border-2 border-error` (alert circle) |
+| Border radius | `rounded-2xl` (card), `rounded-md` (badges), `rounded-full` (progress ring) |
+| Text — primary | `text-text-primary` (`text-base font-semibold` heading, `text-2xl font-bold` progress value) |
+| Text — secondary | `text-text-secondary` (`text-sm`), `text-error` (`text-[11px] font-semibold tracking-wider uppercase`) |
+| Spacing | `p-6` (card interior), `gap-6` (flex items), `gap-2` (tags row), `space-y-3` |
+| Hover state | none (status banner) |
+| Shadow | `shadow-xs` |
+| Accent usage | SVG progress arc `var(--color-error)` and track `var(--color-border-light)` |
+
 **Pattern notes:**
-- Minimalist centered card used exclusively for transient OAuth code exchange and session confirmation.
-- Uses `animate-spin` with `border-accent border-t-transparent` for visual feedback during token resolution.
+- Warns users of incomplete profile status using prominent alert icon and 70% radial progress arc.
+- Missing field chips use uppercase tracking with `text-error` and subtle background tint (`bg-error/5`).
+
+---
+
+### ResumeUpload
+
+File: `components/profile/ResumeUpload.tsx`
+Last updated: 2026-10-20
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (card), `bg-surface-secondary/20` (drop zone), `bg-accent-muted/40` (drag-over), `bg-accent-muted` (cloud icon badge), `bg-accent` (generate button) |
+| Border | `border-border` (card/select button), `border-2 border-dashed border-border-muted` (drop zone) |
+| Border radius | `rounded-2xl` (card), `rounded-xl` (drop zone), `rounded-full` (cloud badge), `rounded-lg` (buttons) |
+| Text — primary | `text-text-primary` (`text-base font-semibold` heading, `text-sm font-semibold` drop title) |
+| Text — secondary | `text-text-secondary` (`text-sm`), `text-text-muted` (`text-xs` file constraint) |
+| Spacing | `p-6` (card), `py-10 px-6` (drop zone), `mt-5`, `mt-6 pt-5` (generation row) |
+| Hover state | `hover:border-accent/40` (drop zone), `hover:bg-surface-secondary` (select button), `hover:bg-accent-dark` (generate button) |
+| Shadow | `shadow-xs` (card & select button), `shadow-sm` (generate button) |
+| Accent usage | `text-accent` (upload cloud icon), `bg-accent` / `hover:bg-accent-dark` (generate button), `bg-accent-muted` (icon badge) |
+
+**Pattern notes:**
+- Drag-and-drop state dynamically switches border to `border-accent` and background to `bg-accent-muted/40`.
+- Secondary action button uses `bg-surface` with `border-border`; primary AI generation button uses solid `bg-accent` with `FileText` icon.
+
+---
+
+### ProfileForm
+
+File: `components/profile/ProfileForm.tsx`
+Last updated: 2026-10-20
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (card, inputs, skill tags), `bg-surface-secondary/20` (role card), `bg-surface-secondary` (add button), `bg-accent` (save button) |
+| Border | `border-border` (card, inputs, dividers, tags), `border-border-light` (role card) |
+| Border radius | `rounded-2xl` (card), `rounded-xl` (role card, save button), `rounded-lg` (inputs, select dropdowns), `rounded-full` (skill tags) |
+| Text — primary | `text-text-primary` (`text-lg font-semibold` title, `text-sm font-semibold` section headings, `text-sm` input text) |
+| Text — secondary | `text-text-secondary` (`text-sm`), `text-text-dark` (`text-[11px] font-semibold tracking-wider uppercase` labels), `text-text-muted` (placeholders) |
+| Spacing | `p-6` (card interior), `p-4 sm:p-5` (role card), `px-3 py-2` (inputs), `my-6` (dividers), `space-y-4` (sections), `gap-4` (grids) |
+| Hover state | `hover:bg-surface-tertiary` (tag add button), `hover:text-error` (tag remove), `hover:bg-accent-dark` (save button), `hover:text-accent-dark` (+ Add role) |
+| Shadow | `shadow-xs` (card), `shadow-2xs` (skill chips), `shadow-sm` (save button) |
+| Accent usage | `focus:ring-accent focus:border-accent` (inputs), `bg-accent hover:bg-accent-dark` (save button), `text-accent` (+ Add role) |
+
+**Pattern notes:**
+- Uppercase subheadings (`text-[11px] font-semibold tracking-wider text-text-dark uppercase`) for form labels provide clear scannability.
+- Interactive skill tags use `rounded-full` pills with discrete `X` remove targets.
+- Focus ring explicitly adopts `focus:ring-1 focus:ring-accent focus:border-accent`.
+
+---
+
+### ProfilePage
+
+File: `app/profile/page.tsx`
+Last updated: 2026-10-20
+
+| Property | Class |
+|---|---|
+| Background | `bg-background` (full page) |
+| Border | None (page container) |
+| Border radius | None |
+| Text — primary | `text-text-primary` |
+| Text — secondary | `text-text-secondary` |
+| Spacing | `max-w-[860px] mx-auto px-4 sm:px-6 py-8 space-y-6` |
+| Hover state | Inherited from children |
+| Shadow | None |
+| Accent usage | Inherited from children |
+
+**Pattern notes:**
+- Single-column centered container (`max-w-[860px]`) with vertical stacking (`space-y-6`) keeping all cards aligned and readable.
+- Employs Next.js 16 Partial Prerendering with `<Suspense>` boundary and `ProfileSkeleton` placeholder.
+
+---
+
+### ProfileSkeleton
+
+File: `app/profile/page.tsx`
+Last updated: 2026-10-20
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (cards), `bg-surface-secondary` (skeletons), `bg-surface-secondary/40` |
+| Border | `border-border`, `border-border-muted` (dashed inner zone) |
+| Border radius | `rounded-2xl` (cards), `rounded-xl` (inner containers), `rounded-md` / `rounded-lg` (bars) |
+| Text | None (placeholder shapes) |
+| Spacing | `space-y-6 animate-pulse`, `p-6` |
+| Animation | `animate-pulse` |
+
+**Pattern notes:**
+- Mirrors the exact 3-tier card layout of the profile page (CompletionIndicator, ResumeUpload, ProfileForm) to eliminate layout shift during server streaming.
+
 
 

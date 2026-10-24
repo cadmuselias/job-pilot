@@ -269,3 +269,120 @@ Last updated: 2026-10-24
 - Bottom card CTA row with explanatory text on the left and primary action button on the right.
 - Visual loading feedback with rotating spinner and label transition ("Polishing with AI...").
 - Integrated success/error banners maintaining strict token adherence without raw colors.
+
+---
+
+### SearchControls
+
+File: `components/find-jobs/SearchControls.tsx`
+Last updated: 2026-10-24
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (card), `bg-success-lightest` (banner), `bg-accent` (button) |
+| Border | `border-border` (card/inputs), `border-success-light/80` (banner) |
+| Border radius | `rounded-2xl` (card), `rounded-xl` (banner), `rounded-lg` (inputs/button) |
+| Text — primary | `text-text-primary` (`text-sm` inputs), `text-white` (button) |
+| Text — secondary | `text-text-secondary` (`text-xs font-semibold tracking-wider uppercase` labels), `text-text-muted` (placeholders), `text-success-foreground` (banner) |
+| Spacing | `p-6` (card), `gap-4` (grid), `px-4 py-3` (banner), `pl-10 pr-3.5 py-2.5` (search input) |
+| Hover state | `hover:bg-accent-dark` (button), `focus:ring-1 focus:ring-accent focus:border-accent` (inputs) |
+| Shadow | `shadow-xs` (card, button), `shadow-2xs` (inputs) |
+| Accent usage | `bg-accent hover:bg-accent-dark text-white` (find jobs button), `focus:ring-accent` |
+
+**Pattern notes:**
+- Top-of-page search control card with aligned inputs and primary action button using `items-end` grid alignment.
+- Notification banner below inputs with `bg-success-lightest` and Sparkles icon for discovery feedback.
+
+---
+
+### JobFilters
+
+File: `components/find-jobs/JobFilters.tsx`
+Last updated: 2026-10-24
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (bar & dropdown pills), `bg-surface-secondary` (hover pill), `bg-accent-muted/40` (active dropdown item) |
+| Border | `border-border` (bar, pill buttons, dropdown menu) |
+| Border radius | `rounded-2xl` (bar), `rounded-xl` (popover menu), `rounded-lg` (pill buttons) |
+| Text — primary | `text-text-primary` (`text-sm font-medium` pill buttons, items, input) |
+| Text — secondary | `text-text-secondary` (chevrons), `text-text-muted` (search icon & placeholder) |
+| Spacing | `p-4` (bar), `px-3.5 py-2` (pills & menu items), `gap-3` (dropdowns row) |
+| Hover state | `hover:bg-surface-secondary` (pills, items), `hover:border-border` (input) |
+| Shadow | `shadow-xs` (bar), `shadow-2xs` (pills), `shadow-lg` (dropdown popover) |
+| Accent usage | `text-accent font-semibold bg-accent-muted/40` (active selected dropdown item) |
+
+**Pattern notes:**
+- Search and filter toolbar with left text query and right-aligned dropdown triggers.
+- Outside-click dismissal for dropdown menus.
+
+---
+
+### JobsTable
+
+File: `components/find-jobs/JobsTable.tsx`
+Last updated: 2026-10-24
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (card & table rows), `bg-surface-secondary/60` (row hover), `bg-surface-secondary` (company icon box), `bg-border-light` (progress track) |
+| Border | `border-border` (card, row dividers, header divider), `border-border-light` (company icon box) |
+| Border radius | `rounded-2xl` (outer card), `rounded-lg` (company icon box), `rounded-full` (progress track & bar) |
+| Text — primary | `text-text-primary` (`text-sm font-semibold` company, `text-sm font-medium` role & salary, `text-sm font-semibold` score) |
+| Text — secondary | `text-text-secondary` (`text-xs font-semibold tracking-wider uppercase` headers, `text-sm` date found) |
+| Spacing | `px-6 py-4` (table cells and header), `gap-3` (company & progress bar flex items) |
+| Hover state | `hover:bg-surface-secondary/60` (table row) |
+| Shadow | `shadow-xs` (card) |
+| Accent / Status usage | Match score fill: `>=90%` `bg-success`, `80-89%` `bg-info-medium`, `70-79%` `bg-warning`, `<70%` `bg-text-muted` |
+
+**Pattern notes:**
+- Clean table presentation without alternating row colors; rows separated by `border-b border-border`.
+- Company column pairs a subtle gray rounded icon container (`w-9 h-9`) with bold company typography.
+- Horizontal score indicator uses 4px/6px rounded track with semantic score tier color coding.
+
+---
+
+### JobsPagination
+
+File: `components/find-jobs/JobsPagination.tsx`
+Last updated: 2026-10-24
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (footer container & inactive buttons), `bg-accent-muted/40` (active page button), `bg-surface-secondary` (hover buttons) |
+| Border | `border-t border-border` (footer separator), `border-border` (buttons), `border-accent` (active page button) |
+| Border radius | `rounded-lg` (all pagination buttons) |
+| Text — primary | `text-text-primary` (`font-semibold` in counter text, button text) |
+| Text — secondary | `text-text-secondary` (`text-sm` counter text, Previous button text), `text-text-muted` (disabled buttons, ellipsis) |
+| Spacing | `px-6 py-4` (footer container), `px-3.5 py-1.5` (Prev/Next), `px-3 py-1.5` (page numbers) |
+| Hover state | `hover:bg-surface-secondary` (enabled buttons) |
+| Shadow | `shadow-2xs` (buttons) |
+| Accent usage | `border-accent text-accent bg-accent-muted/40 font-semibold` (active page button) |
+
+**Pattern notes:**
+- Table footer pagination bar seamlessly integrated at the bottom of the table card.
+- Adaptive page windowing displaying current page, neighbors, and last page with ellipsis.
+
+---
+
+### FindJobsPage
+
+File: `app/find-jobs/page.tsx`
+Last updated: 2026-10-24
+
+| Property | Class |
+|---|---|
+| Background | `bg-background` (full page) |
+| Border | None (page container) |
+| Border radius | None |
+| Text — primary | `text-text-primary` |
+| Text — secondary | `text-text-secondary` |
+| Spacing | `max-w-[1360px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6` |
+| Hover state | Inherited from children |
+| Shadow | None |
+| Accent usage | Inherited from children |
+
+**Pattern notes:**
+- Wide centered layout container (`max-w-[1360px]`) accommodating multi-column search controls, toolbar filters, and data table.
+- Standard 24px vertical section gap (`space-y-6`).
+

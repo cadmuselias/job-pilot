@@ -7,8 +7,8 @@ Update this file after every completed feature. Any AI agent reading this should
 ## Current Status
 
 **Phase:** Phase 3 — Find Jobs Page
-**Last completed:** 08 Resume PDF Generation from Profile
-**Next:** 09 Find Jobs Page — Full UI
+**Last completed:** 09 Find Jobs Page — Full UI
+**Next:** 10 Adzuna Job Discovery
 
 ---
 
@@ -30,7 +30,7 @@ Update this file after every completed feature. Any AI agent reading this should
 
 ### Phase 3 — Find Jobs Page
 
-- [ ] 09 Find Jobs Page — Full UI
+- [x] 09 Find Jobs Page — Full UI
 - [ ] 10 Adzuna Job Discovery
 - [ ] 11 Filter + Sort + Pagination
 
@@ -91,6 +91,14 @@ Update this file after every completed feature. Any AI agent reading this should
   - Added Resume Removal flow: implemented `deleteResumeAction` in `jp/actions/profile.ts` (removes `${user.id}/resume.pdf` from InsForge Storage bucket and clears `profiles.resume_pdf_url = null`). Added "Remove" action in `ResumeUpload.tsx` allowing candidates to delete uploaded/generated CVs and cleanly reset back to the empty upload drop-zone.
   - Added Resume Direct Download: implemented client-side Blob downloader in `ResumeUpload.tsx` with `handleDownloadResume` and an explicit Download button (with `Download` icon from `lucide-react`), enabling instant local `.pdf` file saving with fallback.
   - Imprinted UI patterns to `context/ui-registry.md` and passed 3-layer `/review` audit with zero issues. Next.js 16 production build verified.
+- Feature 09 (Find Jobs Page — Full UI):
+  - Created `jp/app/find-jobs/page.tsx` with dedicated metadata, persistent `Navbar`, and responsive container (`max-w-[1360px]`).
+  - Built `jp/components/find-jobs/SearchControls.tsx`: top search control card with aligned Job Title & Location inputs, Find Jobs primary button, and green discovery status notification banner (`bg-success-lightest`).
+  - Built `jp/components/find-jobs/JobFilters.tsx`: search filter input and interactive dropdown pills (Match Score threshold filter and Sort By order) with outside-click dismissal.
+  - Built `jp/components/find-jobs/JobsTable.tsx`: unified jobs table without alternating row colors, company badges with subtle rounded icon frames, semantic match score progress bars (`bg-success`, `bg-info-medium`, `bg-warning`), salary estimates, and date found timestamps.
+  - Built `jp/components/find-jobs/JobsPagination.tsx`: footer pagination bar integrated into the table card with adaptive page windowing and counter text.
+  - Built `jp/components/find-jobs/FindJobsView.tsx`: client coordinator managing reactive search, query filtering, score filtering, sorting, and pagination across 24 mock jobs matching the design mockup in `context/designs/find-jobs.png`.
+  - Imprinted UI patterns to `context/ui-registry.md` and passed lint and production build checks.
 
 ---
 

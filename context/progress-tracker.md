@@ -89,6 +89,8 @@ Update this file after every completed feature. Any AI agent reading this should
   - Server-side PDF compilation: renders binary buffer via `renderToBuffer()`, converts to type-safe `File` via `Uint8Array`, uploads directly to InsForge Storage (`resumes/{user_id}/resume.pdf` with `upsert: true`), resolves signed/public URL, and persists `resume_pdf_url` on `profiles`.
   - UI reactive integration in `ResumeUpload.tsx` & `ProfileView.tsx`: provides "Generate Resume from Profile" action, loading indicator ("Polishing with AI..."), error/success banners, and immediate active document link ("View" / "Replace"). Next.js router revalidation triggered.
   - Added Resume Removal flow: implemented `deleteResumeAction` in `jp/actions/profile.ts` (removes `${user.id}/resume.pdf` from InsForge Storage bucket and clears `profiles.resume_pdf_url = null`). Added "Remove" action in `ResumeUpload.tsx` allowing candidates to delete uploaded/generated CVs and cleanly reset back to the empty upload drop-zone.
+  - Added Resume Direct Download: implemented client-side Blob downloader in `ResumeUpload.tsx` with `handleDownloadResume` and an explicit Download button (with `Download` icon from `lucide-react`), enabling instant local `.pdf` file saving with fallback.
+  - Imprinted UI patterns to `context/ui-registry.md` and passed 3-layer `/review` audit with zero issues. Next.js 16 production build verified.
 
 ---
 

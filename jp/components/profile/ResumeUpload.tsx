@@ -7,6 +7,7 @@ import {
   Loader2,
   AlertCircle,
   Sparkles,
+  Download,
 } from "lucide-react";
 import { uploadResume, extractResumeAction, deleteResumeAction, type ExtractedProfileData } from "@/actions/profile";
 
@@ -42,6 +43,7 @@ export function ResumeUpload({
   const [generateSuccess, setGenerateSuccess] = useState(false);
 
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const [activeResumeUrl, setActiveResumeUrl] = useState<string | null>(
     currentResumeUrl ?? null
@@ -223,8 +225,37 @@ export function ResumeUpload({
     }
   };
 
+  const handleDownloadResume = async () => {
+    if (!activeResumeUrl) return;
+    setIsDownloading(true);
+
+    try {
+      const response = await fetch(activeResumeUrl);
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      const downloadFilename = selectedFileName
+        ? selectedFileName.replace(/\.pdf$/i, "") + ".pdf"
+        : "Resume.pdf";
+      link.download = downloadFilename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      console.error("[ResumeUpload] Download error, opening in new tab fallback:", err);
+      window.open(activeResumeUrl, "_blank");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const handleSelectResumeClick = () => {
-    if (!isUploading && !isExtracting && !isGenerating && !isDeleting) {
+    if (!isUploading && !isExtracting && !isGenerating && !isDeleting && !isDownloading) {
       fileInputRef.current?.click();
     }
   };
@@ -338,19 +369,34 @@ export function ResumeUpload({
                 {selectedFileName}
               </span>
               {activeResumeUrl && (
-                <a
-                  href={activeResumeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="ml-2 text-accent hover:underline cursor-pointer font-medium shrink-0"
-                >
-                  View
-                </a>
+                <>
+                  <a
+                    href={activeResumeUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-2 text-accent hover:underline cursor-pointer font-medium shrink-0"
+                  >
+                    View
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleDownloadResume}
+                    disabled={isDownloading || isExtracting || isGenerating || isDeleting}
+                    className="ml-2 text-accent hover:underline cursor-pointer font-medium shrink-0 inline-flex items-center gap-1 disabled:opacity-50"
+                  >
+                    {isDownloading ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Download className="w-3 h-3" />
+                    )}
+                    <span>Download</span>
+                  </button>
+                </>
               )}
               <button
                 type="button"
                 onClick={handleSelectResumeClick}
-                disabled={isExtracting || isGenerating || isDeleting}
+                disabled={isDownloading || isExtracting || isGenerating || isDeleting}
                 className="ml-2 underline text-text-secondary hover:text-text-primary cursor-pointer shrink-0 disabled:opacity-50"
               >
                 Replace
@@ -358,7 +404,7 @@ export function ResumeUpload({
               <button
                 type="button"
                 onClick={handleRemoveResume}
-                disabled={isExtracting || isGenerating || isDeleting}
+                disabled={isDownloading || isExtracting || isGenerating || isDeleting}
                 className="ml-2 underline text-error hover:text-error/80 cursor-pointer shrink-0 disabled:opacity-50"
               >
                 {isDeleting ? "Removing..." : "Remove"}

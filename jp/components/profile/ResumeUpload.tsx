@@ -38,6 +38,7 @@ export function ResumeUpload({
   const [selectedFileName, setSelectedFileName] = useState<string | null>(
     currentResumeUrl ? "Current_Resume.pdf" : null
   );
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processUpload = async (file: File) => {
@@ -67,6 +68,7 @@ export function ResumeUpload({
       const res = await uploadResume(formData);
 
       if (res.success && res.url) {
+        setSelectedFile(file);
         setSelectedFileName(file.name);
         setActiveResumeUrl(res.url);
         onFileSelect?.(file);
@@ -122,7 +124,12 @@ export function ResumeUpload({
     setIsExtracting(true);
 
     try {
-      const res = await extractResumeAction();
+      let formData: FormData | undefined;
+      if (selectedFile) {
+        formData = new FormData();
+        formData.append("resume", selectedFile);
+      }
+      const res = await extractResumeAction(formData);
       if (res.success && res.data) {
         setExtractSuccess(true);
         onExtractSuccess?.(res.data);

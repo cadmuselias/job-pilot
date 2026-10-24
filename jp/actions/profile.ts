@@ -319,51 +319,92 @@ export async function extractResumeAction(
     }
 
     const user = authData.user;
-    let buffer: Buffer;
+    let buffer: Buffer | null = null;
 
+    // 1. Try reading directly from uploaded formData if passed
     const file = formData?.get("resume") as File | null;
     if (file && file.size > 0) {
-      const arrayBuffer = await file.arrayBuffer();
-      buffer = Buffer.from(arrayBuffer);
-    } else {
-      // Download current active resume from InsForge storage
-      const storagePath = `${user.id}/resume.pdf`;
-      const { data: fileBlob, error: downloadError } = await insforge.storage
-        .from("resumes")
-        .download(storagePath);
-
-      if (downloadError || !fileBlob) {
-        return {
-          success: false,
-          error: "No uploaded resume found. Please upload a PDF resume first.",
-        };
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const candidateBuf = Buffer.from(arrayBuffer);
+        if (candidateBuf.slice(0, 5).toString().startsWith("%PDF")) {
+          buffer = candidateBuf;
+        }
+      } catch (fileErr) {
+        console.warn("[actions/profile] Failed reading file from formData:", fileErr);
       }
-
-      const arrayBuffer = await fileBlob.arrayBuffer();
-      buffer = Buffer.from(arrayBuffer);
     }
 
-    // Extract text using PDFParse
-    let rawText = "";
-    try {
-      const parser = new PDFParse({ data: buffer });
-      const parseResult = await parser.getText();
-      rawText = (parseResult.text || "").trim();
-      await parser.destroy();
-    } catch (parseError) {
-      console.error("[actions/profile] PDFParse failed:", parseError);
-      return {
-        success: false,
-        error:
-          "Could not extract text from this PDF. Please try a different file.",
-      };
+    // 2. Try fetching active signed URL from user's profile record
+    if (!buffer) {
+      const { data: profile } = await insforge.database
+        .from("profiles")
+        .select("resume_pdf_url")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profile?.resume_pdf_url && profile.resume_pdf_url.startsWith("http")) {
+        try {
+          const res = await fetch(profile.resume_pdf_url);
+          if (res.ok) {
+            const arrayBuffer = await res.arrayBuffer();
+            const candidateBuf = Buffer.from(arrayBuffer);
+            if (candidateBuf.slice(0, 5).toString().startsWith("%PDF")) {
+              buffer = candidateBuf;
+            }
+          }
+        } catch (fetchErr) {
+          console.warn("[actions/profile] Failed fetching profile.resume_pdf_url:", fetchErr);
+        }
+      }
     }
 
-    if (!rawText || rawText.length < 50) {
+    // 3. Try creating a fresh signed URL from InsForge storage
+    const storagePath = `${user.id}/resume.pdf`;
+    if (!buffer) {
+      try {
+        const signedRes = await insforge.storage
+          .from("resumes")
+          .createSignedUrl(storagePath, 3600);
+
+        if (signedRes.data?.signedUrl) {
+          const res = await fetch(signedRes.data.signedUrl);
+          if (res.ok) {
+            const arrayBuffer = await res.arrayBuffer();
+            const candidateBuf = Buffer.from(arrayBuffer);
+            if (candidateBuf.slice(0, 5).toString().startsWith("%PDF")) {
+              buffer = candidateBuf;
+            }
+          }
+        }
+      } catch (signErr) {
+        console.warn("[actions/profile] Failed fetching via createSignedUrl:", signErr);
+      }
+    }
+
+    // 4. Try storage download client
+    if (!buffer) {
+      try {
+        const { data: fileBlob, error: downloadError } = await insforge.storage
+          .from("resumes")
+          .download(storagePath);
+
+        if (!downloadError && fileBlob && fileBlob.size > 0) {
+          const arrayBuffer = await fileBlob.arrayBuffer();
+          const candidateBuf = Buffer.from(arrayBuffer);
+          if (candidateBuf.slice(0, 5).toString().startsWith("%PDF")) {
+            buffer = candidateBuf;
+          }
+        }
+      } catch (dlErr) {
+        console.warn("[actions/profile] Failed downloading via storage.download():", dlErr);
+      }
+    }
+
+    if (!buffer || buffer.length === 0) {
       return {
         success: false,
-        error:
-          "Could not extract text from this PDF. Please try a different file.",
+        error: "No uploaded resume found. Please upload a PDF resume first.",
       };
     }
 
@@ -378,7 +419,7 @@ export async function extractResumeAction(
     const ai = new GoogleGenAI({ apiKey });
 
     const prompt = `You are an expert AI resume parser for JobPilot.
-Analyze the provided resume text and extract all relevant candidate profile fields into the exact JSON format specified below.
+Analyze the provided resume and extract all relevant candidate profile fields into the exact JSON format specified below.
 
 Extraction Guidelines:
 - fullName: candidate's name (string)
@@ -406,18 +447,53 @@ Extraction Guidelines:
 - jobTitlesSeeking: comma-separated string of roles candidate is targeting (e.g. "Frontend Engineer, Full Stack Developer")
 - remotePreference: one of: "remote", "hybrid", "onsite", "any"
 
-Resume Content:
-${rawText}
-
 Return ONLY valid JSON with keys matching the specifications above.`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-      },
-    });
+    // Attempt text extraction with PDFParse
+    let rawText = "";
+    try {
+      const parser = new PDFParse({ data: new Uint8Array(buffer) });
+      const parseResult = await parser.getText();
+      rawText = (parseResult.text || "").trim();
+      await parser.destroy();
+    } catch (parseError) {
+      console.warn("[actions/profile] PDFParse failed, will fallback to Gemini multimodal PDF:", parseError);
+    }
+
+    let response;
+    if (rawText && rawText.length >= 50) {
+      // Primary path: parsed text
+      response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `${prompt}\n\nResume Content:\n${rawText}`,
+        config: {
+          responseMimeType: "application/json",
+        },
+      });
+    } else {
+      // Robust multimodal fallback: Gemini natively parses PDF buffer directly
+      response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: [
+          {
+            parts: [
+              {
+                inlineData: {
+                  mimeType: "application/pdf",
+                  data: buffer.toString("base64"),
+                },
+              },
+              {
+                text: prompt,
+              },
+            ],
+          },
+        ],
+        config: {
+          responseMimeType: "application/json",
+        },
+      });
+    }
 
     let extractedData: ExtractedProfileData;
     try {

@@ -1,58 +1,74 @@
-# Memory — Feature 07: AI Profile Extraction from Resume
+# Memory — Feature 08: Resume PDF Generation from Profile
 
-Last updated: 2026-10-24 21:38
+Last updated: 2026-10-24 23:18
 
 ## What was built
 
-- Implemented `extractResumeAction` in `jp/actions/profile.ts`:
-  - Next.js Server Action verifying current user authentication via `createInsforgeServer()`.
-  - Multi-tier PDF source resolution: inspects incoming `FormData` ("resume" File), falls back to `profile.resume_pdf_url`, then fetches fresh signed URL via `storage.from("resumes").createSignedUrl(...)`, and finally falls back to `storage.from("resumes").download(...)`.
-  - Dual extraction engine: parses PDF text using `pdf-parse`; if text extraction fails or yields insufficient text (<50 characters), seamlessly falls back to Google Gemini native multimodal PDF parsing (`inlineData: { mimeType: 'application/pdf', data: base64 }`).
-  - Uses Google GenAI SDK (`@google/genai`) with `gemini-3-flash-preview` and `responseMimeType: "application/json"` to generate structured candidate profile fields.
-- Created `jp/components/profile/ProfileView.tsx`:
-  - Client component coordinating state between `ResumeUpload` and `ProfileForm`.
-  - Smart synchronous field merging: merges extracted data with existing initial profile data (preserves user's email, name, existing values if not found in resume).
-  - Uses key-based remounting (`ProfileForm key={...-v${extractVersion}}`) to eliminate cascading `useEffect` state updates and satisfy React 19 / ESLint compiler rules.
-- Updated `jp/components/profile/ResumeUpload.tsx`:
-  - Added "Extract from Resume" CTA button with `Sparkles` icon, dynamic `Loader2 animate-spin` loading indicator, disabled state, and contextual helper text.
-  - Added extraction success banner (`bg-success-lightest`, `border-success-light`, `text-success`) and error banner (`bg-error/10`, `border-error/20`, `text-error`).
-  - Preserved `selectedFile` in component state so the client can forward the in-memory uploaded file directly to `extractResumeAction` via `FormData`.
-- Updated `jp/components/profile/ProfileForm.tsx`:
-  - Added `isExtracted` prop and dismissible feedback banner (`bg-accent-muted/40`, `border-accent/30`, `text-accent`) notifying users that fields were auto-filled from their resume and prompting review before clicking Save Profile.
+- Installed `@react-pdf/renderer` in `jp/`.
+- Created `jp/lib/pdf/ResumeTemplate.tsx`:
+  - ATS-optimized single-page PDF document template built with `@react-pdf/renderer`.
+  - Strictly follows supported CSS properties and uses project color/typography tokens (`Helvetica`, `Helvetica-Bold`).
+  - Structured sections: Header & Contact Bar, Professional Summary, Core Competencies & Skills, Work Experience with achievement bullet points, and Education.
+  - Explicitly typed return `ReactElement<DocumentProps>`.
+- Created `jp/app/api/resume/generate/route.ts`:
+  - Next.js API Route Handler verifying user authentication via `createInsforgeServer()`.
+  - Early guardrail checking that candidate full name and either work experience or skills exist before generating.
+  - AI editorial enhancement: queries Google Gemini (`gemini-3-flash-preview` via `@google/genai`) to rewrite raw experience bullets and summary into high-impact accomplishments with strict JSON output.
+  - Graceful fallback: seamlessly falls back to raw profile fields if Gemini encounters errors or rate limits.
+  - Server-side PDF compilation via `renderToBuffer()`, converted to type-safe `File` via `Uint8Array`.
+  - Uploads buffer directly to InsForge Storage (`resumes/{user.id}/resume.pdf` with `upsert: true`), resolves signed/public URL, and persists `resume_pdf_url` on `profiles`.
+- Implemented `deleteResumeAction` in `jp/actions/profile.ts`:
+  - Deletes `${user.id}/resume.pdf` from the InsForge Storage `resumes` bucket.
+  - Resets `resume_pdf_url = null` in the `profiles` table.
+  - Revalidates `/profile`.
+- Enhanced `jp/components/profile/ResumeUpload.tsx`:
+  - Complete resume lifecycle UI:
+    - **Upload**: Drag-and-drop zone and file selector with 5MB limit.
+    - **Extract**: "Extract from Resume" CTA triggering `extractResumeAction`.
+    - **Generate**: "Generate Resume from Profile" CTA calling `/api/resume/generate` with loading spinner ("Polishing with AI...").
+    - **Active Badge Actions**: `View` (opens PDF in new tab), `Download` (client-side blob download saving local `.pdf` file with fallback), `Replace` (re-triggers file selector), and `Remove` (purges file from storage & DB, restoring clean empty drop-zone).
+    - Status banners for upload errors, extraction error/success, and generation error/success.
+- Updated `jp/components/profile/ProfileView.tsx`:
+  - Coordinates active resume URL across upload, generate, and delete actions, triggering `router.refresh()`.
 - Updated project context files:
-  - `context/progress-tracker.md`: Marked Feature 07 complete with decisions.
-  - `context/ui-registry.md`: Imprinted `ResumeUpload`, `ProfileForm`, and `AIExtractionNotice` visual design tokens.
-  - Executed `/review` audit with zero issues across all 3 layers (plan alignment, system integrity, production readiness).
-  - Verified `npm run lint` (0 errors) and Next.js Turbopack `npm run build` (exit code 0).
+  - `context/progress-tracker.md`: Marked Phase 2 Feature 08 complete with full decisions log.
+  - `context/ui-registry.md`: Imprinted visual patterns for `ResumeUpload` and `ResumeGenerateAction`.
+- Verification & Quality:
+  - Passed 3-layer `/review` audit with 0 issues.
+  - `npm run lint`: 0 errors, 0 warnings.
+  - `npm run build`: Production build and route generation succeeded with exit code 0.
+  - All changes committed and pushed to `main`.
 
 ## Decisions made
 
-- Dual PDF Extraction Pipeline: `pdf-parse` is used for high-speed text extraction from text-based PDFs. For complex, scanned, or non-standard PDFs, Gemini's native multimodal inline PDF parser acts as a robust server-side fallback.
-- Client State Coordination via Key Remounting: Kept `ProfileForm` uncontrolled with `initialData` defaults and avoided synchronization `useEffect` cycles in favor of key-based re-rendering (`key="profile-form-v${extractVersion}"`) orchestrated by `ProfileView`.
-- Manual Review Before Save: Extraction populates client-side form state without automatically writing to the database, ensuring candidates retain full control to edit and review before persisting to InsForge PostgreSQL.
-- Server-Side Gemini API Integration: `GEMINI_API_KEY` is accessed strictly inside the Server Action and is never exposed to the client bundle.
+- **Minimum Profile Guardrail**: Early validation requires candidate full name and either work experience or skills before invoking PDF generation, preventing blank document generation.
+- **Dedicated Route Handler**: Used `app/api/resume/generate/route.ts` to isolate `@react-pdf/renderer` buffer compilation and Gemini processing from client bundles.
+- **Graceful Fallback**: If Gemini encounters rate limits or transient errors, the pipeline falls back to compiling the PDF from raw profile data without failing generation.
+- **Full Lifecycle Resume Management**: Included explicit View, Download (client-side Blob streamer), Replace, and Remove (storage deletion + DB nullification) to give users complete control over their CV assets.
+- **Strict Token Adherence**: All component styles adhere to semantic design tokens (`bg-surface`, `border-border`, `text-accent`, `bg-error/10`, `bg-success-lightest`).
 
 ## Problems solved
 
-- "Could not extract text from this PDF":
-  - Next.js Turbopack server environment conflict with internal worker dependencies in PDF text parsers.
-  - Resolved by passing `selectedFile` directly from the client via `FormData` rather than waiting for background storage replication, adding multi-tier storage fallback, and implementing native Gemini multimodal PDF parsing as a resilient fallback.
-- React compiler `set-state-in-effect` lint warning in `ProfileForm`:
-  - Avoided cascading `useEffect` state updates by delegating data merging to `ProfileView` and remounting the form with fresh `initialData`.
+- **Next.js 16 `cacheComponents` Route Conflict**:
+  - Removed incompatible route segment configs (`export const dynamic = 'force-dynamic'` and `export const runtime = 'nodejs'`) to satisfy Next.js 16 build requirements.
+- **TypeScript `Buffer` to `BlobPart` Compatibility**:
+  - Converted `@react-pdf/renderer` buffer to `Uint8Array` when instantiating `new File([new Uint8Array(pdfBuffer)], ...)` to eliminate Node/browser buffer typing conflicts.
+- **Missing Resume Deletion & Download UX**:
+  - Resolved user inability to clear or download their resume by implementing `deleteResumeAction` and `handleDownloadResume` with fallback.
 
 ## Current state
 
-- Phase 1 (Foundation) and Phase 2 through Feature 07 are 100% complete, reviewed, imprinted, and verified.
+- Phase 1 (Foundation) and Phase 2 (Profile Page) are 100% complete, reviewed, imprinted, and verified.
 - `npm run lint` passes with 0 errors and 0 warnings.
 - `npm run build` passes with exit code 0.
 - All changes committed and pushed to `main` branch.
 
 ## Next session starts with
 
-- Phase 2, Feature 08: Resume PDF Generation from Profile
-  - Plan and architect route/action to generate a clean professional PDF resume from current profile data using AI + `@react-pdf/renderer`.
-  - Wire "Generate Resume from Profile" button in `jp/components/profile/ResumeUpload.tsx`.
-  - Save rendered PDF buffer to InsForge Storage at `resumes/{user_id}/resume.pdf` (upsert: true) and update `resume_pdf_url` on `profiles`.
+- **Phase 3 — Find Jobs Page: Feature 09 (Find Jobs Page — Full UI)**
+  - Build the complete Find Jobs page UI (`app/find-jobs/page.tsx` and components in `components/find-jobs/`) with mock data.
+  - Implement Search Controls Card at top (Job Title input, Location input, Find Jobs button, results banner).
+  - Implement Jobs List section below (Filter bar, Jobs table with match score progress bar, salary estimate, source badge, pagination).
 
 ## Open questions
 

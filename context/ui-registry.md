@@ -366,10 +366,34 @@ Last updated: 2026-10-24
 
 ---
 
+### FindJobsView
+
+File: `components/find-jobs/FindJobsView.tsx`
+Last updated: 2026-10-25
+
+| Property | Class |
+|---|---|
+| Background | None (coordinator wrapper), `bg-surface` (error banner) |
+| Border | `border border-error/30` (error banner) |
+| Border radius | `rounded-xl` (error banner) |
+| Text — primary | `text-error` (`text-sm font-medium` error text) |
+| Text — secondary | `text-xs font-semibold underline hover:text-error/80` (login action link) |
+| Spacing | `space-y-6` (root container), `px-4 py-3` (banner interior), `gap-2.5` (banner elements) |
+| Hover state | `hover:text-error/80` (action link) |
+| Shadow | `shadow-2xs` (error banner) |
+| Status / Error usage | `text-error`, `border-error/30`, `bg-surface` for subtle non-intrusive alert |
+
+**Pattern notes:**
+- View coordinator managing live job discovery requests, search filters, match thresholds, sorting, and pagination.
+- Renders contextual error notification banner when unauthenticated or on network failure, with an inline "Log In" direct action redirecting to `/login?returnTo=/find-jobs`.
+- Automatically loads saved database pipeline on initial mount and replaces table results upon new search execution.
+
+---
+
 ### FindJobsPage
 
 File: `app/find-jobs/page.tsx`
-Last updated: 2026-10-24
+Last updated: 2026-10-25
 
 | Property | Class |
 |---|---|

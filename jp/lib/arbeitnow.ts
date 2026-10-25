@@ -39,13 +39,15 @@ export interface DiscoveredCandidateJob {
 }
 
 /**
- * Strips HTML tags, entities, and excessive whitespace from description strings.
+ * Strips HTML tags, entities, and excessive whitespace from description strings,
+ * preserving natural paragraph structure.
  */
 export function stripHtml(html: string): string {
   if (!html) return "";
   return html
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<\/(?:p|div|li|h[1-6])>|<br\s*\/?>/gi, "\n")
     .replace(/<[^>]+>/g, " ")
     .replace(/&nbsp;/gi, " ")
     .replace(/&amp;/gi, "&")
@@ -53,7 +55,8 @@ export function stripHtml(html: string): string {
     .replace(/&gt;/gi, ">")
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, "'")
-    .replace(/\s+/g, " ")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n\s*\n+/g, "\n\n")
     .trim();
 }
 

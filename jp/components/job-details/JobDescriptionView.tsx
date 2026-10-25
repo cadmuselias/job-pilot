@@ -1,4 +1,7 @@
-import { FileText } from "lucide-react";
+"use client";
+
+import { useState } from "react";
+import { FileText, ChevronDown, ChevronUp } from "lucide-react";
 
 interface JobDescriptionViewProps {
   aboutRole?: string | null;
@@ -8,6 +11,31 @@ interface JobDescriptionViewProps {
   benefits?: string[];
 }
 
+/**
+ * Cleans severed trailing word fragments (e.g. "hospitali...")
+ * caused by character-boundary truncations in legacy records.
+ */
+function cleanSeveredEnding(text: string): string {
+  if (!text) return "";
+  const trimmed = text.trim();
+
+  // If text ends with an ellipsis preceded by a partial word, trim back to the last complete sentence
+  if (trimmed.endsWith("...")) {
+    const raw = trimmed.slice(0, -3).trim();
+    const lastPeriod = raw.lastIndexOf(".");
+    if (lastPeriod > 80) {
+      return raw.slice(0, lastPeriod + 1).trim();
+    }
+    // If no clean period, cut at last word boundary
+    const lastSpace = raw.lastIndexOf(" ");
+    if (lastSpace > 40) {
+      return raw.slice(0, lastSpace).trim() + ".";
+    }
+  }
+
+  return trimmed;
+}
+
 export function JobDescriptionView({
   aboutRole,
   responsibilities = [],
@@ -15,6 +43,24 @@ export function JobDescriptionView({
   niceToHave = [],
   benefits = [],
 }: JobDescriptionViewProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const cleanedRole = aboutRole ? cleanSeveredEnding(aboutRole) : "";
+  const isLong = (cleanedRole.length ?? 0) > 320;
+
+  // Derive preview excerpt when collapsed
+  let previewText = cleanedRole;
+  if (isLong && !isExpanded) {
+    const slice = cleanedRole.slice(0, 320);
+    const lastPeriod = slice.lastIndexOf(".");
+    if (lastPeriod > 140) {
+      previewText = slice.slice(0, lastPeriod + 1).trim();
+    } else {
+      const lastSpace = slice.lastIndexOf(" ");
+      previewText = (lastSpace > 80 ? slice.slice(0, lastSpace) : slice).trim() + "...";
+    }
+  }
+
   const hasSections =
     (responsibilities && responsibilities.length > 0) ||
     (requirements && requirements.length > 0) ||
@@ -31,9 +77,26 @@ export function JobDescriptionView({
       </div>
 
       <div className="text-sm text-text-primary leading-relaxed space-y-4">
-        {aboutRole && (
-          <div className="whitespace-pre-line text-text-primary/95">
-            {aboutRole}
+        {cleanedRole && (
+          <div>
+            <div className="whitespace-pre-line text-text-primary/95">
+              {isExpanded ? cleanedRole : previewText}
+            </div>
+
+            {isLong && (
+              <button
+                type="button"
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-accent hover:text-accent-dark transition-colors cursor-pointer"
+              >
+                <span>{isExpanded ? "Show Less" : "Read Full Description"}</span>
+                {isExpanded ? (
+                  <ChevronUp className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5 text-accent" aria-hidden="true" />
+                )}
+              </button>
+            )}
           </div>
         )}
 
@@ -90,7 +153,7 @@ export function JobDescriptionView({
           </div>
         )}
 
-        {!aboutRole && !hasSections && (
+        {!cleanedRole && !hasSections && (
           <p className="text-xs text-text-muted italic">
             No detailed description available for this role.
           </p>

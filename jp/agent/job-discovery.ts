@@ -36,6 +36,29 @@ interface ScoredEvaluation {
 }
 
 /**
+ * Safely extracts a clean summary ending on a complete sentence boundary,
+ * preventing mid-sentence or mid-word truncation.
+ */
+function extractCleanSummary(text: string, maxLen = 800): string {
+  if (!text) return "";
+  const clean = text.trim();
+  if (clean.length <= maxLen) return clean;
+
+  const slice = clean.slice(0, maxLen);
+  const lastPeriod = slice.lastIndexOf(".");
+  if (lastPeriod > 120) {
+    return slice.slice(0, lastPeriod + 1).trim();
+  }
+
+  const lastSpace = slice.lastIndexOf(" ");
+  if (lastSpace > 80) {
+    return slice.slice(0, lastSpace).trim() + "...";
+  }
+
+  return slice;
+}
+
+/**
  * Batched Gemini scoring for discovered jobs against candidate profile.
  */
 async function scoreJobsWithGemini(
@@ -61,7 +84,7 @@ async function scoreJobsWithGemini(
         matchedSkills: cand.tags.slice(0, 4),
         missingSkills: [],
         salary: "$120k - $145k",
-        aboutRole: cand.plainDescription.slice(0, 200) + "...",
+        aboutRole: extractCleanSummary(cand.plainDescription, 800) || cand.plainDescription,
         responsibilities: [
           "Design and build responsive web applications",
           "Collaborate with cross-functional engineering teams",
@@ -191,7 +214,7 @@ Return ONLY a valid JSON array of objects with the exact schema:
         matchedSkills: cand.tags.slice(0, 4),
         missingSkills: [],
         salary: "$115k - $140k",
-        aboutRole: cand.plainDescription.slice(0, 200) + "...",
+        aboutRole: extractCleanSummary(cand.plainDescription, 800) || cand.plainDescription,
         responsibilities: [
           "Develop and maintain scalable software solutions",
           "Work closely with engineering, product, and design peers",
@@ -366,7 +389,7 @@ export async function runJobDiscovery({
         matchedSkills: cand.tags,
         missingSkills: [],
         salary: "$120k - $145k",
-        aboutRole: cand.plainDescription.slice(0, 200),
+        aboutRole: extractCleanSummary(cand.plainDescription, 800) || cand.plainDescription,
         responsibilities: [],
         requirements: cand.tags,
         niceToHave: [],
@@ -391,7 +414,7 @@ export async function runJobDiscovery({
         location: cand.location,
         salary: evalData.salary || "Competitive",
         job_type: cand.isRemote ? "remote" : "fulltime",
-        about_role: evalData.aboutRole || cand.plainDescription.slice(0, 300),
+        about_role: evalData.aboutRole || cand.plainDescription || "No detailed description available.",
         responsibilities: evalData.responsibilities,
         requirements: evalData.requirements,
         nice_to_have: evalData.niceToHave,

@@ -542,13 +542,15 @@ Last updated: 2026-10-25
 | Border radius | `rounded-2xl` (card) |
 | Text — primary | `text-text-primary` (`text-base font-semibold` header, `text-sm leading-relaxed` content) |
 | Text — secondary | `text-text-secondary` (FileText icon, uppercase subheaders), `text-text-muted` (empty fallback) |
-| Spacing | `p-6` (card), `mb-4` (header row), `space-y-4` (content body), `gap-2.5` |
-| Hover state | None |
+| Spacing | `p-6` (card), `mb-4` (header row), `space-y-4` (content body), `gap-2.5`, `mt-2.5` (toggle button) |
+| Hover state | `hover:text-accent-dark` (toggle button) |
 | Shadow | `shadow-xs` (card) |
-| Accent usage | None |
+| Accent usage | `text-accent hover:text-accent-dark` (Read Full Description / Show Less toggle button) |
 
 **Pattern notes:**
 - Document body renderer supporting structured lists (Responsibilities, Requirements, Nice to Have, Benefits) and unstructured text with whitespace preservation.
+- Implements interactive "Read Full Description" / "Show Less" toggle button with `ChevronDown` / `ChevronUp` icons for descriptions exceeding 320 characters.
+- Sanitizes severed trailing fragments from character-boundary legacy cuts, ensuring complete sentence rendering.
 
 ---
 

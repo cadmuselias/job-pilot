@@ -4,7 +4,12 @@ import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { AlertCircle } from "lucide-react";
 import { SearchControls } from "./SearchControls";
-import { JobFilters, type MatchFilterOption, type SortOption } from "./JobFilters";
+import {
+  JobFilters,
+  type MatchFilterOption,
+  type SortOption,
+  type MatchCounts,
+} from "./JobFilters";
 import { JobsTable } from "./JobsTable";
 import { JobsPagination } from "./JobsPagination";
 import { insforge } from "@/lib/insforge-client";
@@ -20,7 +25,7 @@ function formatRelativeDate(isoDateString?: string): string {
   const diffMs = Date.now() - new Date(isoDateString).getTime();
   const diffMins = Math.floor(diffMs / 60000);
   if (diffMins < 60) return diffMins <= 1 ? "Just now" : `${diffMins} mins ago`;
-  const diffHours = Math.floor(diffMins / 60);
+  const diffHours = Math.floor(diffMins / 24);
   if (diffHours < 24) return diffHours === 1 ? "1 hour ago" : `${diffHours} hours ago`;
   const diffDays = Math.floor(diffHours / 24);
   if (diffDays === 1) return "Yesterday";
@@ -102,7 +107,7 @@ export function FindJobsView({ initialJobs = [] }: FindJobsViewProps) {
       : null
   );
 
-  const PAGE_SIZE = 6;
+  const PAGE_SIZE = 20;
 
   // Load previously saved jobs from DB on initial mount
   useEffect(() => {
@@ -129,6 +134,7 @@ export function FindJobsView({ initialJobs = [] }: FindJobsViewProps) {
             match_score: j.match_score ?? 75,
             salary: j.salary || "Competitive",
             date_label: formatRelativeDate(j.found_at),
+            found_at: j.found_at,
             location: j.location || "Remote",
             source: j.source,
           }));
@@ -147,6 +153,24 @@ export function FindJobsView({ initialJobs = [] }: FindJobsViewProps) {
     };
   }, [initialJobs.length]);
 
+  // Compute live counts across the full loaded dataset
+  const counts = useMemo<MatchCounts>(() => {
+    let high = 0;
+    let low = 0;
+    for (const job of jobs) {
+      if (job.match_score >= 70) {
+        high++;
+      } else {
+        low++;
+      }
+    }
+    return {
+      all: jobs.length,
+      high,
+      low,
+    };
+  }, [jobs]);
+
   // Filter and sort jobs
   const filteredJobs = useMemo(() => {
     let list: MockJob[] = [...jobs];
@@ -161,30 +185,34 @@ export function FindJobsView({ initialJobs = [] }: FindJobsViewProps) {
       );
     }
 
-    // Filter by match threshold
-    if (matchFilter === "90+") {
-      list = list.filter((job) => job.match_score >= 90);
-    } else if (matchFilter === "80+") {
-      list = list.filter((job) => job.match_score >= 80);
-    } else if (matchFilter === "70+") {
+    // Filter by match threshold tab
+    if (matchFilter === "high") {
       list = list.filter((job) => job.match_score >= 70);
+    } else if (matchFilter === "low") {
+      list = list.filter((job) => job.match_score < 70);
     }
 
     // Sort jobs
     if (sortBy === "match") {
       list.sort((a, b) => b.match_score - a.match_score);
-    } else if (sortBy === "salary") {
-      const parseSalary = (s: string) => {
-        const match = s.match(/\$(\d+)k/) || s.match(/€(\d+)k/) || s.match(/£(\d+)k/);
-        return match ? parseInt(match[1], 10) : 0;
-      };
-      list.sort((a, b) => parseSalary(b.salary) - parseSalary(a.salary));
+    } else if (sortBy === "newest") {
+      list.sort((a, b) => {
+        const timeA = a.found_at ? new Date(a.found_at).getTime() : 0;
+        const timeB = b.found_at ? new Date(b.found_at).getTime() : 0;
+        return timeB - timeA;
+      });
+    } else if (sortBy === "oldest") {
+      list.sort((a, b) => {
+        const timeA = a.found_at ? new Date(a.found_at).getTime() : 0;
+        const timeB = b.found_at ? new Date(b.found_at).getTime() : 0;
+        return timeA - timeB;
+      });
     }
 
     return list;
   }, [jobs, filterQuery, matchFilter, sortBy]);
 
-  // Paginated slice
+  // Paginated slice (20 per page)
   const paginatedJobs = useMemo(() => {
     const startIndex = (currentPage - 1) * PAGE_SIZE;
     return filteredJobs.slice(startIndex, startIndex + PAGE_SIZE);
@@ -242,7 +270,7 @@ export function FindJobsView({ initialJobs = [] }: FindJobsViewProps) {
 
       const discoveredJobs: Job[] = data.jobs || [];
 
-      // Set ONLY the newly searched jobs — sample jobs are completely gone!
+      // Map newly scored jobs, preserving found_at
       const mappedDiscovered: MockJob[] = discoveredJobs.map((j) => ({
         id: j.id,
         company: j.company,
@@ -250,6 +278,7 @@ export function FindJobsView({ initialJobs = [] }: FindJobsViewProps) {
         match_score: j.match_score ?? 75,
         salary: j.salary || "Competitive",
         date_label: formatRelativeDate(j.found_at),
+        found_at: j.found_at,
         location: j.location || "Remote",
         source: j.source,
       }));
@@ -297,7 +326,7 @@ export function FindJobsView({ initialJobs = [] }: FindJobsViewProps) {
         </div>
       )}
 
-      {/* Filter and Sorting Controls Bar */}
+      {/* Filter and Sorting Controls Bar with Segmented Tabs */}
       <JobFilters
         filterQuery={filterQuery}
         onFilterChange={handleFilterChange}
@@ -305,6 +334,7 @@ export function FindJobsView({ initialJobs = [] }: FindJobsViewProps) {
         onMatchFilterChange={handleMatchFilterChange}
         sortBy={sortBy}
         onSortByChange={handleSortByChange}
+        counts={counts}
       />
 
       {/* Jobs Table Card with Integrated Pagination */}

@@ -5,6 +5,7 @@ export interface MockJob {
   match_score: number;
   salary: string;
   date_label: string;
+  found_at?: string;
   location?: string;
   source?: "search" | "url";
 }

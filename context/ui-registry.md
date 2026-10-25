@@ -299,23 +299,24 @@ Last updated: 2026-10-25
 ### JobFilters
 
 File: `components/find-jobs/JobFilters.tsx`
-Last updated: 2026-10-24
+Last updated: 2026-10-25
 
 | Property | Class |
 |---|---|
-| Background | `bg-surface` (bar & dropdown pills), `bg-surface-secondary` (hover pill), `bg-accent-muted/40` (active dropdown item) |
-| Border | `border-border` (bar, pill buttons, dropdown menu) |
-| Border radius | `rounded-2xl` (bar), `rounded-xl` (popover menu), `rounded-lg` (pill buttons) |
-| Text — primary | `text-text-primary` (`text-sm font-medium` pill buttons, items, input) |
-| Text — secondary | `text-text-secondary` (chevrons), `text-text-muted` (search icon & placeholder) |
-| Spacing | `p-4` (bar), `px-3.5 py-2` (pills & menu items), `gap-3` (dropdowns row) |
-| Hover state | `hover:bg-surface-secondary` (pills, items), `hover:border-border` (input) |
-| Shadow | `shadow-xs` (bar), `shadow-2xs` (pills), `shadow-lg` (dropdown popover) |
-| Accent usage | `text-accent font-semibold bg-accent-muted/40` (active selected dropdown item) |
+| Background | `bg-surface` (bar & sort trigger), `bg-surface-secondary` (tabs group & hover pill), `bg-accent-muted` (active tab badge), `bg-surface-tertiary` (inactive tab badge), `bg-accent-muted/40` (active sort item) |
+| Border | `border-border` (bar, tabs container, sort trigger & popover), `border-border/70` (active tab) |
+| Border radius | `rounded-2xl` (bar), `rounded-xl` (segmented tabs group & sort popover), `rounded-lg` (tabs, sort trigger, search input), `rounded-full` (tab count badges) |
+| Text — primary | `text-text-primary` (`text-sm font-semibold` active tab & sort label, `text-sm` input) |
+| Text — secondary | `text-text-secondary` (inactive tabs, sort label prefix, sort chevron), `text-text-muted` (search icon, clear button, inactive badge) |
+| Spacing | `p-4` (bar), `p-1` (tabs group), `px-3 py-1.5` (tab button), `px-2 py-0.5` (tab badge), `px-3.5 py-2` (sort trigger & items), `gap-1.5` (tabs), `gap-4` (bar elements) |
+| Hover state | `hover:bg-surface/50` (inactive tabs), `hover:bg-surface-secondary` (sort trigger & items), `hover:text-text-primary` (clear button & inactive tabs) |
+| Shadow | `shadow-xs` (bar), `shadow-2xs` (active tab & sort trigger), `shadow-lg` (sort popover) |
+| Accent usage | `text-accent bg-accent-muted` (active tab count badge), `text-accent font-semibold bg-accent-muted/40` (active sort option) |
 
 **Pattern notes:**
-- Search and filter toolbar with left text query and right-aligned dropdown triggers.
-- Outside-click dismissal for dropdown menus.
+- Segmented match tier tabs (`All Matches`, `High Match (≥70%)`, `Low Match (<70%)`) with dynamic count badges for 1-click filtering.
+- Text search input with clear button (`X`) for immediate company or role filtering.
+- Dedicated Sort dropdown (`Match Score`, `Newest First`, `Oldest First`) with outside-click dismissal.
 
 ---
 

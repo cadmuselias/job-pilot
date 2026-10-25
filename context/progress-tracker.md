@@ -111,6 +111,11 @@ Update this file after every completed feature. Any AI agent reading this should
   - Connected live discovery in `jp/components/find-jobs/FindJobsView.tsx` and `SearchControls.tsx`: added loading state with spinning `Loader2` indicator, error banner, and dynamic table update with real discovered jobs.
   - Hardened client infrastructure: resolved hydration mismatch from browser extension DOM mutations via `suppressHydrationWarning` on `<html>` and `<body>` in `app/layout.tsx`; disabled unused external PostHog session recording and dead clicks script loading in `lib/posthog-client.ts`.
   - Passed lint check (0 errors, 0 warnings) and verified production build with `npm run build` (exit code 0).
+- Feature 11 (Filter + Sort + Pagination):
+  - Updated `jp/components/find-jobs/JobFilters.tsx`: implemented segmented match tier tabs (`All Matches`, `High Match (≥70%)`, `Low Match (<70%)`) with dynamic live count badges, text search input with clear (`X`) button, and dedicated Sort dropdown (`Match Score`, `Newest First`, `Oldest First`) with click-outside dismissal.
+  - Updated `jp/components/find-jobs/FindJobsView.tsx`: wired client-side memoized filtering, ISO `found_at` date sorting, and pagination (20 jobs per page) across real InsForge DB jobs with automatic page reset to 1 on filter/sort change.
+  - Updated `MockJob` interface in `jp/components/find-jobs/mock-data.ts` to retain `found_at` timestamp from DB.
+  - Imprinted UI patterns to `context/ui-registry.md`. Passed ESLint with 0 errors/warnings and verified production build with `npm run build` (exit code 0).
 
 ---
 

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Building2, SearchX } from "lucide-react";
 import type { MockJob } from "./mock-data";
 
@@ -84,19 +85,27 @@ export function JobsTable({ jobs, pagination }: JobsTableProps) {
                 >
                   {/* Company */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-surface-secondary border border-border-light flex items-center justify-center text-text-secondary shrink-0">
-                        <Building2 className="w-4 h-4 text-text-secondary" aria-hidden="true" />
+                    <Link
+                      href={`/find-jobs/${job.id}`}
+                      className="flex items-center gap-3 group"
+                    >
+                      <div className="w-9 h-9 rounded-lg bg-surface-secondary border border-border-light flex items-center justify-center text-text-secondary shrink-0 group-hover:border-accent/40 transition-colors">
+                        <Building2 className="w-4 h-4 text-text-secondary group-hover:text-accent transition-colors" aria-hidden="true" />
                       </div>
-                      <span className="text-sm font-semibold text-text-primary">
+                      <span className="text-sm font-semibold text-text-primary group-hover:text-accent transition-colors">
                         {job.company}
                       </span>
-                    </div>
+                    </Link>
                   </td>
 
                   {/* Role */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
-                    {job.title}
+                    <Link
+                      href={`/find-jobs/${job.id}`}
+                      className="hover:text-accent transition-colors block"
+                    >
+                      {job.title}
+                    </Link>
                   </td>
 
                   {/* Match Score */}

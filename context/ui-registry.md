@@ -437,4 +437,183 @@ Last updated: 2026-10-25
 - Uses `suppressHydrationWarning` on both `<html>` and `<body>` tags to prevent hydration mismatches caused by browser extension attribute injections.
 - Employs `min-h-full flex flex-col` for sticky footer support across all route pages.
 
+---
+
+### JobHeader
+
+File: `components/job-details/JobHeader.tsx`
+Last updated: 2026-10-25
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (card), `bg-surface-secondary` (building icon box / button hover), `bg-success-lightest` (match badge) |
+| Border | `border-border` (card & external button), `border-border-light` (icon box), `border-success-light/60` (match badge) |
+| Border radius | `rounded-2xl` (card & icon box), `rounded-full` (match badge), `rounded-lg` (external button) |
+| Text — primary | `text-text-primary` (`text-2xl font-bold` title, `text-sm font-medium` button text) |
+| Text — secondary | `text-text-secondary` (`text-sm font-medium` company, back link text & icons), `text-success-foreground` (match badge) |
+| Spacing | `p-6` (card), `gap-4` (flex items), `gap-2` (title badges row), `px-4 py-2` (button), `px-2.5 py-0.5` (match badge), `mb-6` (back link) |
+| Hover state | `hover:text-text-primary` (back link), `hover:bg-surface-secondary` (view job post button) |
+| Shadow | `shadow-xs` (card), `shadow-2xs` (external button) |
+| Accent usage | None directly; uses `bg-success-lightest` / `text-success-foreground` for match score badge |
+
+**Pattern notes:**
+- Header card with left-hand company building square icon (`w-14 h-14 rounded-2xl`), bold title, company name, dot separator, and pill match score badge.
+- Right-hand external action button linking to `redirect_url` with `ExternalLink` icon.
+- Top navigation link with `ChevronLeft` returning to `/find-jobs`.
+
+---
+
+### JobMetrics
+
+File: `components/job-details/JobMetrics.tsx`
+Last updated: 2026-10-25
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (cards), `bg-success-lightest` (salary icon), `bg-info-lightest` (location icon), `bg-accent-muted` (job type icon), `bg-surface-secondary` (calendar icon) |
+| Border | `border-border` (cards), `border-border-light` (calendar icon box) |
+| Border radius | `rounded-2xl` (cards), `rounded-xl` (metric icon containers) |
+| Text — primary | `text-text-primary` (`text-base font-bold` values) |
+| Text — secondary | `text-text-secondary` (`text-[11px] font-semibold tracking-wider uppercase` labels) |
+| Spacing | `p-5` (cards), `gap-4` (grid), `gap-3.5` (card interior flex) |
+| Hover state | None (metric cards) |
+| Shadow | `shadow-xs` (cards) |
+| Accent usage | `bg-accent-muted text-accent` (Job Type icon box), `text-success bg-success-lightest` (Salary), `text-info-medium bg-info-lightest` (Location) |
+
+**Pattern notes:**
+- 4-column responsive grid (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4`) detailing Salary Est., Location, Job Type, and Date Found.
+- Each item features a specialized 44x44px rounded container with thematic token backgrounds and icons.
+
+---
+
+### MatchReasoning
+
+File: `components/job-details/MatchReasoning.tsx`
+Last updated: 2026-10-25
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (card), `bg-success-lightest` (sparkles icon container) |
+| Border | `border-border` (card) |
+| Border radius | `rounded-2xl` (card), `rounded-lg` (sparkles icon box) |
+| Text — primary | `text-text-primary` (`text-sm font-normal leading-relaxed` reasoning paragraph) |
+| Text — secondary | `text-text-secondary` (`text-xs font-semibold tracking-wider uppercase` header) |
+| Spacing | `p-6` (card), `mb-3.5` (header gap), `gap-2.5` (header elements) |
+| Hover state | None |
+| Shadow | `shadow-xs` (card) |
+| Accent usage | `text-success-alt bg-success-lightest` (AI Sparkles icon container) |
+
+**Pattern notes:**
+- AI synthesis card delivering explanation of candidate compatibility with clean line-height and typography.
+
+---
+
+### SkillsComparison
+
+File: `components/job-details/SkillsComparison.tsx`
+Last updated: 2026-10-25
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (card), `bg-success-lightest` (matched pills), `bg-accent-muted` (gap pills) |
+| Border | `border-border` (card), `border-success-light/60` (matched pills), `border-accent/20` (gap pills) |
+| Border radius | `rounded-2xl` (card), `rounded-full` (skill pills) |
+| Text — primary | `text-success-foreground` (matched skills), `text-accent` (gap skills) |
+| Text — secondary | `text-text-secondary` (`text-xs font-semibold tracking-wider uppercase` header, `text-xs font-medium` section labels), `text-text-muted` (empty fallbacks) |
+| Spacing | `p-6` (card), `px-3 py-1` (skill pills), `gap-2` (pill wraps), `mb-4` / `mt-5 mb-2.5` (section spacing) |
+| Hover state | None (status chips) |
+| Shadow | `shadow-xs` (card) |
+| Accent usage | `bg-accent-muted text-accent border-accent/20` (Gap skills pills), `bg-success-lightest text-success-foreground` (You have pills) |
+
+**Pattern notes:**
+- 2-tier comparative breakdown displaying "You have" skills with checkmark icons and "Gap skills" with cross icons.
+
+---
+
+### JobDescriptionView
+
+File: `components/job-details/JobDescriptionView.tsx`
+Last updated: 2026-10-25
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (card) |
+| Border | `border-border` (card) |
+| Border radius | `rounded-2xl` (card) |
+| Text — primary | `text-text-primary` (`text-base font-semibold` header, `text-sm leading-relaxed` content) |
+| Text — secondary | `text-text-secondary` (FileText icon, uppercase subheaders), `text-text-muted` (empty fallback) |
+| Spacing | `p-6` (card), `mb-4` (header row), `space-y-4` (content body), `gap-2.5` |
+| Hover state | None |
+| Shadow | `shadow-xs` (card) |
+| Accent usage | None |
+
+**Pattern notes:**
+- Document body renderer supporting structured lists (Responsibilities, Requirements, Nice to Have, Benefits) and unstructured text with whitespace preservation.
+
+---
+
+### CompanyResearchCard
+
+File: `components/job-details/CompanyResearchCard.tsx`
+Last updated: 2026-10-25
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (card), `bg-accent-muted` (header icon), `bg-accent hover:bg-accent-dark` (button), `bg-surface-secondary` (empty icon box) |
+| Border | `border-border` (card), `border-border-light` (empty icon box) |
+| Border radius | `rounded-2xl` (card), `rounded-lg` (button & header icon), `rounded-xl` (empty icon box) |
+| Text — primary | `text-text-primary` (`text-base font-semibold` title, `text-sm font-semibold` empty title), `text-white` (button) |
+| Text — secondary | `text-text-secondary` (`text-xs max-w-sm` description), `text-text-muted` (empty icon) |
+| Spacing | `p-6` (card), `mb-8` (header spacing), `py-6 sm:py-8` (empty state), `px-4 py-2` (button), `mb-3` |
+| Hover state | `hover:bg-accent-dark` (button) |
+| Shadow | `shadow-xs` (card & button) |
+| Accent usage | `bg-accent hover:bg-accent-dark text-white` (Research Company button), `bg-accent-muted text-accent` (header icon) |
+
+**Pattern notes:**
+- Company research card establishing empty state with centered icon, copy, and action button ready for Feature 13 agent integration.
+
+---
+
+### ApplyButton
+
+File: `components/job-details/ApplyButton.tsx`
+Last updated: 2026-10-25
+
+| Property | Class |
+|---|---|
+| Background | `bg-accent hover:bg-accent-dark` (button), `bg-accent/60` (disabled fallback) |
+| Border | None |
+| Border radius | `rounded-xl` |
+| Text — primary | `text-white` (`text-sm sm:text-base font-medium`) |
+| Spacing | `pt-2` (container), `py-3.5 px-6` (button) |
+| Hover state | `hover:bg-accent-dark active:scale-[0.99]` |
+| Shadow | `shadow-xs` |
+| Accent usage | `bg-accent hover:bg-accent-dark` primary CTA |
+
+**Pattern notes:**
+- Full-width high-priority action button at page bottom directing candidate to external job application.
+
+---
+
+### JobDetailsPage
+
+File: `app/find-jobs/[id]/page.tsx`
+Last updated: 2026-10-25
+
+| Property | Class |
+|---|---|
+| Background | `bg-background` (full page) |
+| Border | None |
+| Border radius | None |
+| Text — primary | Inherited |
+| Text — secondary | Inherited |
+| Spacing | `max-w-[860px] w-full mx-auto px-4 sm:px-6 py-8 space-y-6` |
+| Hover state | Inherited from children |
+| Shadow | None |
+| Accent usage | Inherited from children |
+
+**Pattern notes:**
+- Centered single-column layout (`max-w-[860px]`) with vertical stacking (`space-y-6`) matching `context/designs/job-details.png`.
+- Implements Next.js 16 Partial Prerendering with `<Suspense fallback={<JobDetailsSkeleton />}>` for zero layout shift during async server data streaming.
+
 

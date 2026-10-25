@@ -7,8 +7,8 @@ Update this file after every completed feature. Any AI agent reading this should
 ## Current Status
 
 **Phase:** Phase 4 — Job Details Page
-**Last completed:** 11 Filter + Sort + Pagination
-**Next:** 12 Job Details Page — Full UI
+**Last completed:** 12 Job Details Page — Full UI
+**Next:** 13 Company Research Agent
 
 ---
 
@@ -36,7 +36,7 @@ Update this file after every completed feature. Any AI agent reading this should
 
 ### Phase 4 — Job Details Page
 
-- [ ] 12 Job Details Page — Full UI
+- [x] 12 Job Details Page — Full UI
 - [ ] 13 Company Research Agent
 
 ### Phase 5 — Dashboard
@@ -116,6 +116,22 @@ Update this file after every completed feature. Any AI agent reading this should
   - Updated `jp/components/find-jobs/FindJobsView.tsx`: wired client-side memoized filtering, ISO `found_at` date sorting, and pagination (20 jobs per page) across real InsForge DB jobs with automatic page reset to 1 on filter/sort change.
   - Updated `MockJob` interface in `jp/components/find-jobs/mock-data.ts` to retain `found_at` timestamp from DB.
   - Imprinted UI patterns to `context/ui-registry.md`. Passed ESLint with 0 errors/warnings and verified production build with `npm run build` (exit code 0).
+- Feature 12 (Job Details Page — Full UI):
+  - Created modular presentational UI components in `jp/components/job-details/`:
+    - `JobHeader.tsx`: Back to Jobs navigation link, company logo placeholder, job title, company name, match score badge with percentage, and external "View Job Post" button (`redirect_url`).
+    - `JobMetrics.tsx`: 4-column responsive info grid with custom token-based icon badges detailing Salary Est. (`$`), Location (`MapPin`), Job Type (`Briefcase`), and Date Found (`Calendar`).
+    - `MatchReasoning.tsx`: Sparkles icon header with uppercase label and AI match reasoning paragraph.
+    - `SkillsComparison.tsx`: "You have" matched skills green checkmark badges (`bg-success-lightest text-success-foreground`) and "Gap skills" purple cross badges (`bg-accent-muted text-accent`).
+    - `JobDescriptionView.tsx`: Formatted job description view with structured bullet points for responsibilities, requirements, nice-to-haves, and benefits.
+    - `CompanyResearchCard.tsx`: Company research card implementing the static empty state ("No research yet" with centered building icon and descriptive copy) and disabled "Research Company" CTA button ready for Feature 13 agent integration.
+    - `ApplyButton.tsx`: Full-width bottom CTA button linking to `external_apply_url` / `source_url`.
+  - Built Next.js 16 dynamic route at `jp/app/find-jobs/[id]/page.tsx`:
+    - Implemented with Next.js 16 Partial Prerendering using `<Suspense fallback={<JobDetailsSkeleton />}>` around dynamic data streaming.
+    - Server-side data fetching directly from InsForge database with `paramsPromise` resolution and demo mock data fallback.
+    - Dynamic metadata generation for SEO (`generateMetadata`) with page title and description.
+    - Clean 404 handling via `notFound()`.
+  - Updated `jp/components/find-jobs/JobsTable.tsx` to wrap table company and role columns in `<Link href={`/find-jobs/${job.id}`}>`, enabling direct navigation from the jobs pipeline to job details.
+  - Verified with ESLint (0 errors, 0 warnings) and production build `npm run build` (exit code 0). Imprinted all components to `context/ui-registry.md`.
 
 ---
 

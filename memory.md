@@ -1,54 +1,42 @@
-# Memory — Feature 10: Arbeitnow Job Discovery, AI Scoring & Client Infrastructure Hardening
+# Memory — Feature 11: Filter + Sort + Pagination & Phase 3 Completion
 
-Last updated: 2026-10-25 17:37
+Last updated: 2026-10-25 17:58
 
 ## What was built
 
-- **Arbeitnow Job Discovery & AI Scoring** (Feature 10):
-  - `jp/lib/arbeitnow.ts`: Free ATS job feed scraper and relevance ranker against candidate preferences with HTML tag stripping.
-  - `jp/agent/job-discovery.ts`: End-to-end Gemini (`gemini-3-flash-preview`) scoring agent with batched JSON schema evaluation, DB deduplication by `source_url`, audit logging to `agent_runs` and `agent_logs`, and PostHog event logging (`job_search_started`, `job_found`).
-  - `jp/app/api/agent/find/route.ts`: Authenticated Next.js route handler supporting Bearer tokens and cookie authentication.
-  - `jp/components/find-jobs/FindJobsView.tsx`: Live search, real database pipeline loaded on mount, sample mock jobs removed, multi-tier auth resolution.
-  - `jp/components/find-jobs/SearchControls.tsx`: Loading state with spinner (`Loader2`) and label transitions.
-  - `jp/proxy.ts`: Route protection for `/find-jobs`, `/dashboard`, `/profile`.
-- **Client Infrastructure & Console Error Resolution**:
-  - `jp/app/layout.tsx`: Added `suppressHydrationWarning` to `<html>` and `<body>` tags to guard against hydration mismatches caused by 3rd-party browser extensions (`Scribe`, `WebCRX`).
-  - `jp/lib/posthog-client.ts`: Configured PostHog initialization with `autocapture: false`, `disable_session_recording: true`, `capture_dead_clicks: false`, and `disable_external_dependency_loading: true`, preventing PostHog from attempting to load external CDN scripts in local dev or adblocked environments.
+- **Filter, Sort & Pagination Engine** (Feature 11):
+  - `jp/components/find-jobs/JobFilters.tsx`: Segmented match tier tabs (`All Matches`, `High Match (≥70%)`, `Low Match (<70%)`) with dynamic count badges, case-insensitive text search with clear (`X`) button, and dedicated Sort dropdown (`Match Score`, `Newest First`, `Oldest First`) with click-outside dismissal.
+  - `jp/components/find-jobs/FindJobsView.tsx`: Client-side memoized filtering, ISO `found_at` date sorting, and pagination (20 jobs per page) across real InsForge DB jobs with automatic page reset to 1 on filter/sort change.
+  - `jp/components/find-jobs/mock-data.ts`: Updated `MockJob` interface to retain `found_at` ISO timestamp from DB.
 - **Registries & Documentation**:
-  - `context/ui-registry.md`: Imprinted `SearchControls`, `JobFilters`, `JobsTable`, `JobsPagination`, `FindJobsView`, `FindJobsPage`, and `RootLayout`.
-  - `context/progress-tracker.md`: Updated Phase 3 Feature 10 with implementation notes and hardened client infrastructure details.
+  - `context/ui-registry.md`: Imprinted `JobFilters` with updated segmented tabs, badges, search, and sort dropdown design patterns.
+  - `context/progress-tracker.md`: Checked off Feature 11, marked Phase 3 100% complete, and advanced current status to Phase 4 (Job Details Page).
 
 ## Decisions made
 
-- **PostHog Minimal Client**: Disabled external dependency loading and session recording in the client SDK since JobPilot relies exclusively on custom business events (`job_search_started`, `job_found`, `profile_completed`, `company_researched`) without invasive DOM recording.
-- **Hydration Guard**: Used `suppressHydrationWarning` on `<html>` and `<body>` root elements rather than removing extensions or using client-only rendering, preserving SSR performance.
-- **Multi-Tier Token Resolution**: Client extracts auth token across memory, cookies, and localStorage, sending `Authorization: Bearer <token>` to prevent 401 unauthenticated drops during API requests.
-- **Batched Gemini AI Scoring**: Evaluated all candidate jobs in a single structured Gemini prompt call (~2s round-trip).
+- **Client-Side Filtering & Sorting**: Handled in-memory via `useMemo` in `FindJobsView.tsx` across the loaded pipeline, ensuring 0ms keystroke search, instant tab switching, and seamless updates when new discovery runs finish.
+- **Segmented Tabs with Counts**: Replaced the nested match filter dropdown with visible segmented tabs displaying real-time counts, giving users 1-click filtering and immediate context on strong vs fair matches.
+- **ISO `found_at` Sorting**: Preserved raw `found_at` strings from the database on `MockJob` so timestamp parsing and date-based sorting (`Newest First`, `Oldest First`) are completely exact.
+- **Next.js 16 Dependency Pinning**: Kept locked Next.js 16.4.0 and React 19.3.0 dependencies, avoiding experimental canary codemods that can cause breaking changes with Turbopack and server actions.
 
 ## Problems solved
 
-- **5 Browser Console Errors on `/find-jobs`**:
-  - PostHog `[SessionRecording] "could not load recorder"` and `[Dead Clicks] "failed to load script"`: Fixed by setting `disable_session_recording: true`, `capture_dead_clicks: false`, and `disable_external_dependency_loading: true` in `lib/posthog-client.ts`.
-  - React Hydration Mismatch (`webcrx-bridged=""`, `data-scribe-recorder-ready="true"`): Fixed by setting `suppressHydrationWarning` on `<html>` and `<body>` in `app/layout.tsx`.
-- **401 Unauthorized for Authenticated Search**:
-  - Fixed by passing explicit `Authorization: Bearer <token>` in `FindJobsView.tsx` with server-side `overrideToken` extraction in `insforge-server.ts`.
-- **Sample Mock Jobs Persisting**:
-  - Replaced mock job array with real saved jobs from the database.
+- **Next.js Upgrade Process Stalling**: Diagnosed child process `spawn npx ENOENT` on Windows; validated that the existing locked Next.js 16.4.0 build compiles with 0 errors and 0 warnings.
+- **Pagination State Desynchronization**: Ensured active page index resets to 1 whenever search query, match tier filter, or sort order is modified.
 
 ## Current state
 
-- Phase 1 (Foundation), Phase 2 (Profile Page), and Phase 3 Features 09 & 10 (Find Jobs UI & Discovery Engine) are 100% complete and verified.
-- Production build compiles cleanly (`npm run build` exit code 0).
-- ESLint passes cleanly (`npx eslint .` 0 errors, 0 warnings).
-- Zero console errors in browser devtools.
-- All code committed and pushed to `main` (`628ed37`).
+- Phase 1 (Foundation), Phase 2 (Profile Page), and Phase 3 (Find Jobs Page, Discovery Engine, Filter/Sort/Pagination) are 100% complete and verified.
+- ESLint passes with 0 errors and 0 warnings (`npx eslint components/find-jobs`).
+- Production build compiles cleanly with exit code 0 (`npm run build`).
+- All changes committed and pushed to `main` (`280a674`).
 
 ## Next session starts with
 
-- **Phase 3 — Feature 11: Filter + Sort + Pagination**
-  - Run `/architect feature 11` before building.
-  - Wire client-side filtering (Match Score threshold >= 70% vs all), sorting (Match Score desc, Found At desc, Found At asc), and pagination (10 per page) over the active jobs array in `FindJobsView.tsx`.
-  - Optionally support server-side query params in `GET /api/agent/find` for scaling larger datasets.
+- **Phase 4 — Feature 12: Job Details Page — Full UI**
+  - Run `/architect feature 12` before building.
+  - Build `jp/app/jobs/[id]/page.tsx` and job details UI components.
+  - Wire real job data from InsForge DB: Back to Jobs link, company logo placeholder, job title, company name, match score badge with percentage, View Job Post button (`redirect_url`), info cards (Salary Est., Location, Job Type, Date Found), and AI Match Reasoning section. Company research section shows empty state.
 
 ## Open questions
 

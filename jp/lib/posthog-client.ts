@@ -12,6 +12,10 @@ export function initPostHog() {
       posthog.init(key, {
         api_host: host,
         capture_pageview: false, // manual pageview tracking per project standards
+        autocapture: false,
+        disable_session_recording: true,
+        capture_dead_clicks: false,
+        disable_external_dependency_loading: true,
       });
     }
   }

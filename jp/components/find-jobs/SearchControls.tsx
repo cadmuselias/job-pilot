@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Sparkles } from "lucide-react";
+import { Search, Sparkles, Loader2 } from "lucide-react";
 
 interface SearchControlsProps {
   initialJobTitle?: string;
   initialLocation?: string;
   onSearch?: (title: string, location: string) => void;
   resultMessage?: string | null;
+  isLoading?: boolean;
 }
 
 export function SearchControls({
@@ -15,6 +16,7 @@ export function SearchControls({
   initialLocation = "",
   onSearch,
   resultMessage = "Found 8 jobs and saved 4 strong matches.",
+  isLoading = false,
 }: SearchControlsProps) {
   const [jobTitle, setJobTitle] = useState(initialJobTitle);
   const [location, setLocation] = useState(initialLocation);
@@ -76,10 +78,20 @@ export function SearchControls({
           <div>
             <button
               type="submit"
-              className="w-full md:w-auto bg-accent hover:bg-accent-dark text-white text-sm font-medium px-5 py-2.5 rounded-lg inline-flex items-center justify-center gap-2 transition-all active:scale-[0.99] cursor-pointer shadow-xs h-[42px] shrink-0"
+              disabled={isLoading}
+              className="w-full md:w-auto bg-accent hover:bg-accent-dark text-white text-sm font-medium px-5 py-2.5 rounded-lg inline-flex items-center justify-center gap-2 transition-all active:scale-[0.99] cursor-pointer shadow-xs h-[42px] shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <Search className="w-4 h-4 text-white" aria-hidden="true" />
-              <span>Find Jobs</span>
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 text-white animate-spin" aria-hidden="true" />
+                  <span>Discovering Jobs...</span>
+                </>
+              ) : (
+                <>
+                  <Search className="w-4 h-4 text-white" aria-hidden="true" />
+                  <span>Find Jobs</span>
+                </>
+              )}
             </button>
           </div>
         </div>

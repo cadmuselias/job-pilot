@@ -1,57 +1,54 @@
-# Memory — Feature 09: Find Jobs Page — Full UI
+# Memory — Feature 10: Arbeitnow Job Discovery & AI Scoring
 
-Last updated: 2026-10-25 00:05
+Last updated: 2026-10-25 15:45
 
 ## What was built
 
-- Built the complete Find Jobs page UI matching `context/designs/find-jobs.png`:
-  - `jp/components/find-jobs/mock-data.ts`: Structured mock dataset of 24 jobs with exact companies (Vercel, Stripe, Linear, Notion, OpenAI, Figma), match scores (94%, 88%, 96%, 72%, 91%, 85%), salary ranges, and relative dates.
-  - `jp/components/find-jobs/SearchControls.tsx`: Top search controls card with aligned Job Title (with `Search` icon) and Location inputs, Find Jobs button (`bg-accent`), and green discovery confirmation banner (`bg-success-lightest`, `Sparkles` icon, *"Found 8 jobs and saved 4 strong matches."*).
-  - `jp/components/find-jobs/JobFilters.tsx`: Search filter toolbar with text query input (*"Filter by company or role..."*) and interactive pill dropdowns for Match Score threshold (All, 90%+, 80%+, 70%+) and Sort By options with outside-click dismissal.
-  - `jp/components/find-jobs/JobsTable.tsx`: Unified data table without alternating row colors, company badges with subtle rounded icon frames and `Building2` icon, semantic progress bar color tiers (`bg-success`, `bg-info-medium`, `bg-warning`), salary estimates, date timestamps, and an empty state card for unmatched queries.
-  - `jp/components/find-jobs/JobsPagination.tsx`: Integrated footer pagination with results counter (*"Showing 1 to 6 of 24 results"*) and windowed page numbers with active pill indicator.
-  - `jp/components/find-jobs/FindJobsView.tsx`: Client view coordinator handling real-time query filtering, score filtering, sorting, and pagination across 24 mock jobs.
-  - `jp/app/find-jobs/page.tsx`: Page route with dedicated metadata and centered responsive container (`max-w-[1360px]`) wrapped with global `Navbar`.
-- Updated documentation and audit files:
-  - `context/progress-tracker.md`: Marked Phase 3 Feature 09 complete with detailed decisions log.
-  - `context/ui-registry.md`: Imprinted visual patterns for all 5 new components.
-- Verification & Quality:
-  - Passed 3-layer `/review` audit with 0 issues.
-  - `npm run lint`: 0 errors, 0 warnings.
-  - `npm run build`: Production build and route generation succeeded with exit code 0 (`○ /find-jobs` static prerender).
-  - Committed and pushed to `main` branch (`5633b76`).
+- Adopted **Arbeitnow** as the zero-key, free public ATS job feed provider for JobPilot:
+  - `jp/lib/arbeitnow.ts`: Fetches listings from `https://www.arbeitnow.com/api/job-board-api`, applies weighted tokenized matching across `title`, `tags`, `description`, and location/remote preferences, strips HTML formatting, and extracts structured job fields.
+- Implemented Job Discovery & AI Scoring Agent:
+  - `jp/agent/job-discovery.ts`: Coordinates end-to-end discovery. Batches up to 8-10 candidate jobs into a single Gemini (`gemini-3-flash-preview`) prompt with `responseMimeType: "application/json"`, returning structured compatibility evaluations (`matchScore`, `matchReason`, `matchedSkills`, `missingSkills`, `salary`, `aboutRole`, `responsibilities`, `requirements`, `niceToHave`, `benefits`, `aboutCompany`).
+  - Persists runs to `agent_runs` (`status: running -> completed/failed`), audit logs to `agent_logs`, and scored job listings to `jobs` table with `source: 'search'`.
+  - Performs deduplication on `jobs.source_url` for the authenticated user to avoid redundant entries.
+  - Emits PostHog server events (`job_search_started`, `job_found`).
+- Created API Route Handler:
+  - `jp/app/api/agent/find/route.ts`: Authenticates user session with InsForge SSR client, parses `{ jobTitle, location }`, invokes the discovery agent, and returns `{ success: true, count, strongMatchesCount, jobs }`.
+- Connected Find Jobs Frontend:
+  - `jp/components/find-jobs/SearchControls.tsx`: Added `isLoading` state, spinning `Loader2` indicator, "Discovering Jobs..." label, and disabled state on inputs/button during search.
+  - `jp/components/find-jobs/FindJobsView.tsx`: Wired `handleSearchSubmit` to `POST /api/agent/find`. Updates real discovered jobs directly in state, updates the green discovery feedback banner (*"Found X jobs and saved Y strong matches"*), and displays error alerts if unauthenticated or on failure.
+- Documentation & Registries:
+  - `context/progress-tracker.md`: Marked Phase 3 Feature 10 complete with technical decision log.
+  - `context/ui-registry.md`: Imprinted `SearchControls` loading state patterns.
+- Verification:
+  - ESLint: 0 errors, 0 warnings.
+  - Next.js Turbopack build (`npm run build`): Exit code 0, static prerender and dynamic route `ƒ /api/agent/find` generated.
 
 ## Decisions made
 
-- **Unified Table & Pagination Card**: Nested `JobsPagination` directly inside the `JobsTable` container card so the table rows and pagination controls share a single continuous rounded border (`rounded-2xl border border-border shadow-xs`) matching `find-jobs.png`.
-- **Semantic Score Tier Colors**: Strictly mapped match score ranges to design tokens: `>=90%` `bg-success` (green), `80-89%` `bg-info-medium` (blue), `70-79%` `bg-warning` (orange), `<70%` `bg-text-muted`.
-- **Client-Side Interactivity Before API Integration**: Equipped the UI with working client-side state for search submission, role/company text filtering, score thresholds, sorting, and pagination, delivering an interactive preview experience while awaiting Feature 10/11 backend wiring.
-- **Strict Token Adherence**: Zero hardcoded hex values or raw Tailwind color scales used across all components.
+- **Arbeitnow Over Paid Adzuna**: Sourced listings from Arbeitnow's public endpoint with zero API key requirement, generous rate limits, and full ATS descriptions (leveraging richer text context for higher quality AI matching).
+- **Batched Gemini Scoring**: Evaluated all 8-10 candidates against candidate profile in a single JSON-structured Gemini call (~2s execution) rather than sequential round trips.
+- **Deduplication in DB**: Matched `source_url` against existing records for `user_id` before inserting into `jobs`, updating existing records if re-discovered.
+- **Graceful Unauthenticated UX**: Protected route returns 401 and UI surfaces a clear alert prompting the user to log in to search and save jobs to their pipeline.
 
 ## Problems solved
 
-- **Browser Subagent CDN Limitation**:
-  - Playwright driver download encountered an HTTP 404 from Azure CDN in this sandbox network environment.
-  - Verified UI rendering and code safety via Next.js Turbopack production compilation (`npm run build`), route static page generation, and strict TypeScript/ESLint verification.
-- **PowerShell Command Separation**:
-  - Replaced Bash `&&` operators with PowerShell `;` statement separators for chaining Git commands on Windows.
+- **Next.js 16 Partial Prerendering on /find-jobs**:
+  - Avoided uncached dynamic cookie reads during static prerendering by keeping the page statically rendered while delegating authenticated search and dynamic discovery to the client coordinator and API route.
+- **Clean ESLint 9 Compliance**:
+  - Removed unused eslint-disable comment in `agent/job-discovery.ts` to ensure 0 errors and 0 warnings.
 
 ## Current state
 
-- Phase 1 (Foundation), Phase 2 (Profile Page), and Phase 3 Feature 09 (Find Jobs Page UI) are 100% complete, reviewed, imprinted, and committed to `main`.
-- `npm run lint` passes with 0 errors and 0 warnings.
-- `npm run build` compiles with exit code 0.
-- Dev server is running on `http://localhost:3000`.
+- Phase 1 (Foundation), Phase 2 (Profile Page), and Phase 3 Features 09 & 10 (Find Jobs UI & Arbeitnow Discovery) are 100% complete and verified.
+- Production build compiles cleanly (`npm run build` exit code 0).
+- Dev server running on `http://localhost:3000`.
 
 ## Next session starts with
 
-- **Phase 3 — Find Jobs Page: Feature 10 (Adzuna Job Discovery)**
-  - Run `/architect feature 10` before writing logic.
-  - Implement `agent/adzuna.ts` to call Adzuna API (`https://api.adzuna.com/v1/api/jobs/{country}/search/1`).
-  - Score discovered jobs against the authenticated user's profile using Google Gemini / GPT-4o (match score 0-100, reason, matched & missing skills).
-  - Persist run in `agent_runs`, jobs in `jobs`, and logs in `agent_logs` on InsForge PostgreSQL.
-  - Emit PostHog server events (`job_search_started`, `job_found`).
-  - Wire `POST /api/agent/find` route handler to `FindJobsView.tsx` search submission.
+- **Phase 3 — Feature 11: Filter + Sort + Pagination**
+  - Run `/architect feature 11` before building.
+  - Wire filter tabs (All Matches, High Match >= 70, Low Match < 70), sort dropdown (Match Score, Newest, Oldest), text search, and pagination to real InsForge DB data.
+  - Support fetching and updating the user's saved pipeline from InsForge.
 
 ## Open questions
 

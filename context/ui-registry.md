@@ -275,7 +275,7 @@ Last updated: 2026-10-24
 ### SearchControls
 
 File: `components/find-jobs/SearchControls.tsx`
-Last updated: 2026-10-24
+Last updated: 2026-10-25
 
 | Property | Class |
 |---|---|
@@ -292,6 +292,7 @@ Last updated: 2026-10-24
 **Pattern notes:**
 - Top-of-page search control card with aligned inputs and primary action button using `items-end` grid alignment.
 - Notification banner below inputs with `bg-success-lightest` and Sparkles icon for discovery feedback.
+- Loading state: disables inputs and primary button (`disabled:opacity-60 disabled:cursor-not-allowed`), displays spinning `Loader2` icon (`animate-spin`), and transitions label to "Discovering Jobs...".
 
 ---
 

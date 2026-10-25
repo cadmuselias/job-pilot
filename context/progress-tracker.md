@@ -7,8 +7,8 @@ Update this file after every completed feature. Any AI agent reading this should
 ## Current Status
 
 **Phase:** Phase 3 — Find Jobs Page
-**Last completed:** 09 Find Jobs Page — Full UI
-**Next:** 10 Adzuna Job Discovery
+**Last completed:** 10 Arbeitnow Job Discovery & AI Scoring
+**Next:** 11 Filter + Sort + Pagination
 
 ---
 
@@ -31,7 +31,7 @@ Update this file after every completed feature. Any AI agent reading this should
 ### Phase 3 — Find Jobs Page
 
 - [x] 09 Find Jobs Page — Full UI
-- [ ] 10 Adzuna Job Discovery
+- [x] 10 Arbeitnow Job Discovery & AI Scoring
 - [ ] 11 Filter + Sort + Pagination
 
 ### Phase 4 — Job Details Page
@@ -99,6 +99,17 @@ Update this file after every completed feature. Any AI agent reading this should
   - Built `jp/components/find-jobs/JobsPagination.tsx`: footer pagination bar integrated into the table card with adaptive page windowing and counter text.
   - Built `jp/components/find-jobs/FindJobsView.tsx`: client coordinator managing reactive search, query filtering, score filtering, sorting, and pagination across 24 mock jobs matching the design mockup in `context/designs/find-jobs.png`.
   - Imprinted UI patterns to `context/ui-registry.md` and passed lint and production build checks.
+- Feature 10 (Arbeitnow Job Discovery & AI Scoring):
+  - Adopted Arbeitnow's free, zero-key public ATS job feed (`https://www.arbeitnow.com/api/job-board-api`) as a reliable drop-in replacement for the paid Adzuna tier.
+  - Implemented `jp/lib/arbeitnow.ts`: fetches recent listings, performs weighted relevance scoring on title, tags, description, and location/remote criteria, strips HTML tags, and returns top candidates.
+  - Implemented `jp/agent/job-discovery.ts`:
+    - Batched AI job scoring using Google Gemini (`gemini-3-flash-preview` via `@google/genai`) with structured JSON schema evaluation for match score (0-100), reasoning, matched skills, missing skills, compensation estimate, and structured role sections (`responsibilities`, `requirements`, `nice_to_have`, `benefits`, `about_company`).
+    - Robust deduplication against `jobs` table by `source_url` for current user.
+    - Full database tracking: inserts/updates `agent_runs` (`status: running -> completed/failed`, jobs count), logs progress to `agent_logs`, and persists scored listings to `jobs` table with `source: 'search'`.
+    - Dispatches PostHog events `job_search_started` and `job_found`.
+  - Built Next.js Route Handler `jp/app/api/agent/find/route.ts` with authenticated InsForge SSR verification and error handling.
+  - Connected live discovery in `jp/components/find-jobs/FindJobsView.tsx` and `SearchControls.tsx`: added loading state with spinning `Loader2` indicator, error banner, and dynamic table update with real discovered jobs.
+  - Passed lint check (0 errors, 0 warnings) and verified production build with `npm run build` (exit code 0).
 
 ---
 

@@ -4,13 +4,17 @@ import { runJobDiscovery } from "@/agent/job-discovery";
 
 export async function POST(req: NextRequest) {
   try {
-    const insforge = await createInsforgeServer();
+    const authHeader = req.headers.get("authorization");
+    const bearerToken = authHeader ? authHeader.replace(/^Bearer\s+/i, "").trim() : undefined;
+
+    const insforge = await createInsforgeServer(bearerToken);
     const {
       data: authData,
       error: authError,
     } = await insforge.auth.getCurrentUser();
 
     if (authError || !authData?.user) {
+      console.warn("[api/agent/find POST] Auth verification failed:", authError?.message || "No user session");
       return NextResponse.json(
         { success: false, error: "Unauthorized. Please log in to search for jobs." },
         { status: 401 }
@@ -40,15 +44,18 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error: unknown) {
-    console.error("[api/agent/find] Route handler error:", error);
+    console.error("[api/agent/find POST] Route handler error:", error);
     const msg = error instanceof Error ? error.message : "Internal Server Error";
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const insforge = await createInsforgeServer();
+    const authHeader = req.headers.get("authorization");
+    const bearerToken = authHeader ? authHeader.replace(/^Bearer\s+/i, "").trim() : undefined;
+
+    const insforge = await createInsforgeServer(bearerToken);
     const {
       data: authData,
       error: authError,

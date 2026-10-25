@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import Link from "next/link";
 import { AlertCircle } from "lucide-react";
 import { SearchControls } from "./SearchControls";
 import { JobFilters, type MatchFilterOption, type SortOption } from "./JobFilters";
 import { JobsTable } from "./JobsTable";
 import { JobsPagination } from "./JobsPagination";
+import { insforge } from "@/lib/insforge-client";
 import type { MockJob } from "./mock-data";
 import type { Job } from "@/types";
 
@@ -26,6 +28,66 @@ function formatRelativeDate(isoDateString?: string): string {
   return new Date(isoDateString).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+/**
+ * Robust token resolver that checks in-memory client, document cookies,
+ * and localStorage, keeping credentials synchronized across browser boundaries.
+ */
+function getActiveAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+
+  // 1. Check in-memory InsForge client
+  const clientAny = insforge as unknown as {
+    tokenManager?: {
+      getAccessToken?: () => string | null;
+      getSession?: () => { accessToken?: string } | null;
+    };
+  };
+
+  let token =
+    clientAny.tokenManager?.getAccessToken?.() ||
+    clientAny.tokenManager?.getSession?.()?.accessToken ||
+    null;
+
+  // 2. Check document.cookie
+  if (!token && typeof document !== "undefined") {
+    const match = document.cookie.match(new RegExp("(^|;\\s*)insforge_access_token=([^;]*)"));
+    if (match) token = decodeURIComponent(match[2]);
+  }
+
+  // 3. Fallback scan across localStorage for persisted session tokens
+  if (!token) {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.includes("insforge") || key.includes("token") || key.includes("auth"))) {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            if (raw.startsWith("eyJ")) {
+              token = raw;
+              break;
+            }
+            try {
+              const parsed = JSON.parse(raw);
+              if (parsed?.accessToken) {
+                token = parsed.accessToken;
+                break;
+              }
+            } catch {}
+          }
+        }
+      }
+    } catch {}
+  }
+
+  // Ensure cookie is synchronized if token exists
+  if (token && typeof document !== "undefined") {
+    const secure = window.location.protocol === "https:" ? "; Secure" : "";
+    document.cookie = `insforge_access_token=${encodeURIComponent(token)}; path=/; max-age=604800; SameSite=Lax${secure}`;
+  }
+
+  return token;
+}
+
 export function FindJobsView({ initialJobs = [] }: FindJobsViewProps) {
   const [jobs, setJobs] = useState<MockJob[]>(initialJobs);
   const [filterQuery, setFilterQuery] = useState("");
@@ -42,15 +104,22 @@ export function FindJobsView({ initialJobs = [] }: FindJobsViewProps) {
 
   const PAGE_SIZE = 6;
 
-  // On mount, load previously saved jobs for authenticated user from DB
+  // Load previously saved jobs from DB on initial mount
   useEffect(() => {
     if (initialJobs.length > 0) return;
 
     let isMounted = true;
-    async function loadSavedJobs() {
+    async function fetchSavedJobs() {
       try {
-        const res = await fetch("/api/agent/find");
+        const token = getActiveAuthToken();
+        const headers: Record<string, string> = {};
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+
+        const res = await fetch("/api/agent/find", { headers });
         if (!res.ok) return;
+
         const data = await res.json();
         if (isMounted && data.success && Array.isArray(data.jobs) && data.jobs.length > 0) {
           const mapped: MockJob[] = (data.jobs as Job[]).map((j) => ({
@@ -71,7 +140,8 @@ export function FindJobsView({ initialJobs = [] }: FindJobsViewProps) {
       }
     }
 
-    loadSavedJobs();
+    void fetchSavedJobs();
+
     return () => {
       isMounted = false;
     };
@@ -142,11 +212,17 @@ export function FindJobsView({ initialJobs = [] }: FindJobsViewProps) {
     setSearchError(null);
 
     try {
+      const token = getActiveAuthToken();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
       const res = await fetch("/api/agent/find", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           jobTitle: title,
           location,
@@ -205,9 +281,19 @@ export function FindJobsView({ initialJobs = [] }: FindJobsViewProps) {
 
       {/* Error Alert if search failed */}
       {searchError && (
-        <div className="bg-surface border border-error/30 rounded-xl px-4 py-3 flex items-center gap-2.5 text-error shadow-2xs">
-          <AlertCircle className="w-4 h-4 text-error shrink-0" aria-hidden="true" />
-          <span className="text-sm font-medium">{searchError}</span>
+        <div className="bg-surface border border-error/30 rounded-xl px-4 py-3 flex items-center justify-between text-error shadow-2xs">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="w-4 h-4 text-error shrink-0" aria-hidden="true" />
+            <span className="text-sm font-medium">{searchError}</span>
+          </div>
+          {searchError.includes("log in") && (
+            <Link
+              href="/login?returnTo=/find-jobs"
+              className="text-xs font-semibold underline hover:text-error/80 ml-3 shrink-0"
+            >
+              Log In
+            </Link>
+          )}
         </div>
       )}
 

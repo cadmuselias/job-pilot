@@ -45,3 +45,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }
+
+export async function GET() {
+  try {
+    const insforge = await createInsforgeServer();
+    const {
+      data: authData,
+      error: authError,
+    } = await insforge.auth.getCurrentUser();
+
+    if (authError || !authData?.user) {
+      return NextResponse.json({ success: true, jobs: [] });
+    }
+
+    const { data: dbJobs, error: dbError } = await insforge.database
+      .from("jobs")
+      .select("*")
+      .eq("user_id", authData.user.id)
+      .order("found_at", { ascending: false });
+
+    if (dbError) {
+      console.error("[api/agent/find GET] DB error:", dbError);
+      return NextResponse.json({ success: false, error: dbError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, jobs: dbJobs || [] });
+  } catch (error: unknown) {
+    console.error("[api/agent/find GET] Unexpected error:", error);
+    const msg = error instanceof Error ? error.message : "Internal Server Error";
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  }
+}

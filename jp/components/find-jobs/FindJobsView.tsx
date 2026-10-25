@@ -1,22 +1,33 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { AlertCircle } from "lucide-react";
 import { SearchControls } from "./SearchControls";
 import { JobFilters, type MatchFilterOption, type SortOption } from "./JobFilters";
 import { JobsTable } from "./JobsTable";
 import { JobsPagination } from "./JobsPagination";
-import { MOCK_JOBS, type MockJob } from "./mock-data";
+import type { MockJob } from "./mock-data";
 import type { Job } from "@/types";
 
 interface FindJobsViewProps {
   initialJobs?: MockJob[];
 }
 
-export function FindJobsView({ initialJobs }: FindJobsViewProps) {
-  const [jobs, setJobs] = useState<MockJob[]>(
-    initialJobs && initialJobs.length > 0 ? initialJobs : MOCK_JOBS
-  );
+function formatRelativeDate(isoDateString?: string): string {
+  if (!isoDateString) return "Recently";
+  const diffMs = Date.now() - new Date(isoDateString).getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 60) return diffMins <= 1 ? "Just now" : `${diffMins} mins ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return diffHours === 1 ? "1 hour ago" : `${diffHours} hours ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays} days ago`;
+  return new Date(isoDateString).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+export function FindJobsView({ initialJobs = [] }: FindJobsViewProps) {
+  const [jobs, setJobs] = useState<MockJob[]>(initialJobs);
   const [filterQuery, setFilterQuery] = useState("");
   const [matchFilter, setMatchFilter] = useState<MatchFilterOption>("all");
   const [sortBy, setSortBy] = useState<SortOption>("match");
@@ -24,12 +35,47 @@ export function FindJobsView({ initialJobs }: FindJobsViewProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [resultMessage, setResultMessage] = useState<string | null>(
-    initialJobs && initialJobs.length > 0
+    initialJobs.length > 0
       ? `Displaying ${initialJobs.length} saved jobs in your pipeline.`
-      : "Found 8 jobs and saved 4 strong matches."
+      : null
   );
 
   const PAGE_SIZE = 6;
+
+  // On mount, load previously saved jobs for authenticated user from DB
+  useEffect(() => {
+    if (initialJobs.length > 0) return;
+
+    let isMounted = true;
+    async function loadSavedJobs() {
+      try {
+        const res = await fetch("/api/agent/find");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (isMounted && data.success && Array.isArray(data.jobs) && data.jobs.length > 0) {
+          const mapped: MockJob[] = (data.jobs as Job[]).map((j) => ({
+            id: j.id,
+            company: j.company,
+            title: j.title,
+            match_score: j.match_score ?? 75,
+            salary: j.salary || "Competitive",
+            date_label: formatRelativeDate(j.found_at),
+            location: j.location || "Remote",
+            source: j.source,
+          }));
+          setJobs(mapped);
+          setResultMessage(`Displaying ${mapped.length} saved jobs in your pipeline.`);
+        }
+      } catch (err) {
+        console.warn("[FindJobsView] Error fetching saved jobs:", err);
+      }
+    }
+
+    loadSavedJobs();
+    return () => {
+      isMounted = false;
+    };
+  }, [initialJobs.length]);
 
   // Filter and sort jobs
   const filteredJobs = useMemo(() => {
@@ -59,7 +105,7 @@ export function FindJobsView({ initialJobs }: FindJobsViewProps) {
       list.sort((a, b) => b.match_score - a.match_score);
     } else if (sortBy === "salary") {
       const parseSalary = (s: string) => {
-        const match = s.match(/\$(\d+)k/);
+        const match = s.match(/\$(\d+)k/) || s.match(/€(\d+)k/) || s.match(/£(\d+)k/);
         return match ? parseInt(match[1], 10) : 0;
       };
       list.sort((a, b) => parseSalary(b.salary) - parseSalary(a.salary));
@@ -120,24 +166,19 @@ export function FindJobsView({ initialJobs }: FindJobsViewProps) {
 
       const discoveredJobs: Job[] = data.jobs || [];
 
-      if (discoveredJobs.length > 0) {
-        const mappedDiscovered: MockJob[] = discoveredJobs.map((j) => ({
-          id: j.id,
-          company: j.company,
-          title: j.title,
-          match_score: j.match_score ?? 75,
-          salary: j.salary || "Competitive",
-          date_label: "Just now",
-          location: j.location || "Remote",
-          source: j.source,
-        }));
+      // Set ONLY the newly searched jobs — sample jobs are completely gone!
+      const mappedDiscovered: MockJob[] = discoveredJobs.map((j) => ({
+        id: j.id,
+        company: j.company,
+        title: j.title,
+        match_score: j.match_score ?? 75,
+        salary: j.salary || "Competitive",
+        date_label: formatRelativeDate(j.found_at),
+        location: j.location || "Remote",
+        source: j.source,
+      }));
 
-        setJobs((prev) => {
-          const newIds = new Set(mappedDiscovered.map((j) => j.id));
-          const remaining = prev.filter((j) => !newIds.has(j.id));
-          return [...mappedDiscovered, ...remaining];
-        });
-      }
+      setJobs(mappedDiscovered);
 
       setResultMessage(
         `Found ${data.count} jobs and saved ${data.strongMatchesCount} strong matches.`
@@ -155,8 +196,8 @@ export function FindJobsView({ initialJobs }: FindJobsViewProps) {
     <div className="space-y-6">
       {/* Search Controls Card at Top */}
       <SearchControls
-        initialJobTitle="Frontend Engineer"
-        initialLocation="Remote, New York..."
+        initialJobTitle=""
+        initialLocation=""
         resultMessage={resultMessage}
         isLoading={isSearching}
         onSearch={handleSearchSubmit}

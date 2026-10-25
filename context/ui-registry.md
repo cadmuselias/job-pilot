@@ -411,3 +411,29 @@ Last updated: 2026-10-25
 - Wide centered layout container (`max-w-[1360px]`) accommodating multi-column search controls, toolbar filters, and data table.
 - Standard 24px vertical section gap (`space-y-6`).
 
+---
+
+### RootLayout
+
+File: `app/layout.tsx`
+Last updated: 2026-10-25
+
+| Property | Class / Attribute |
+|---|---|
+| Background | None on html/body (children default to `bg-background`) |
+| Border | None |
+| Border radius | None |
+| Text — primary | Inherited |
+| Text — secondary | Inherited |
+| Spacing | `min-h-full flex flex-col` (body container) |
+| Attributes | `suppressHydrationWarning` on `<html>` and `<body>` to guard against 3rd-party extension mutations |
+| Font Variable | `${inter.variable} h-full antialiased` |
+| Shadow | None |
+| Accent usage | None |
+
+**Pattern notes:**
+- Root layout wraps application tree in `PostHogProvider` and `AuthProvider`.
+- Uses `suppressHydrationWarning` on both `<html>` and `<body>` tags to prevent hydration mismatches caused by browser extension attribute injections.
+- Employs `min-h-full flex flex-col` for sticky footer support across all route pages.
+
+

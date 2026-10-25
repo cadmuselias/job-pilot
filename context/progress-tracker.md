@@ -109,6 +109,7 @@ Update this file after every completed feature. Any AI agent reading this should
     - Dispatches PostHog events `job_search_started` and `job_found`.
   - Built Next.js Route Handler `jp/app/api/agent/find/route.ts` with authenticated InsForge SSR verification and error handling.
   - Connected live discovery in `jp/components/find-jobs/FindJobsView.tsx` and `SearchControls.tsx`: added loading state with spinning `Loader2` indicator, error banner, and dynamic table update with real discovered jobs.
+  - Hardened client infrastructure: resolved hydration mismatch from browser extension DOM mutations via `suppressHydrationWarning` on `<html>` and `<body>` in `app/layout.tsx`; disabled unused external PostHog session recording and dead clicks script loading in `lib/posthog-client.ts`.
   - Passed lint check (0 errors, 0 warnings) and verified production build with `npm run build` (exit code 0).
 
 ---

@@ -1,6 +1,6 @@
 # Memory — Feature 10: Arbeitnow Job Discovery & AI Scoring
 
-Last updated: 2026-10-25 15:45
+Last updated: 2026-10-25 16:10
 
 ## What was built
 
@@ -12,10 +12,12 @@ Last updated: 2026-10-25 15:45
   - Performs deduplication on `jobs.source_url` for the authenticated user to avoid redundant entries.
   - Emits PostHog server events (`job_search_started`, `job_found`).
 - Created API Route Handler:
-  - `jp/app/api/agent/find/route.ts`: Authenticates user session with InsForge SSR client, parses `{ jobTitle, location }`, invokes the discovery agent, and returns `{ success: true, count, strongMatchesCount, jobs }`.
+  - `jp/app/api/agent/find/route.ts`: Authenticates user session with InsForge SSR client, supports Bearer header and cookie fallback, parses `{ jobTitle, location }`, invokes the discovery agent, and returns `{ success: true, count, strongMatchesCount, jobs }`. Also provides a `GET` endpoint to retrieve existing saved jobs.
 - Connected Find Jobs Frontend:
   - `jp/components/find-jobs/SearchControls.tsx`: Added `isLoading` state, spinning `Loader2` indicator, "Discovering Jobs..." label, and disabled state on inputs/button during search.
-  - `jp/components/find-jobs/FindJobsView.tsx`: Wired `handleSearchSubmit` to `POST /api/agent/find`. Updates real discovered jobs directly in state, updates the green discovery feedback banner (*"Found X jobs and saved Y strong matches"*), and displays error alerts if unauthenticated or on failure.
+  - `jp/components/find-jobs/FindJobsView.tsx`: Completely purged sample mock jobs from search results. Resolves multi-tier client auth credentials (memory, cookie, localStorage) and sends `Authorization: Bearer <token>` alongside cookies. Replaces table content with only live discovered jobs.
+- Route Protection & Proxy:
+  - `jp/proxy.ts`: Updated matcher to include `/find-jobs` explicitly alongside `/dashboard` and `/profile`.
 - Documentation & Registries:
   - `context/progress-tracker.md`: Marked Phase 3 Feature 10 complete with technical decision log.
   - `context/ui-registry.md`: Imprinted `SearchControls` loading state patterns.
@@ -25,17 +27,19 @@ Last updated: 2026-10-25 15:45
 
 ## Decisions made
 
-- **Arbeitnow Over Paid Adzuna**: Sourced listings from Arbeitnow's public endpoint with zero API key requirement, generous rate limits, and full ATS descriptions (leveraging richer text context for higher quality AI matching).
-- **Batched Gemini Scoring**: Evaluated all 8-10 candidates against candidate profile in a single JSON-structured Gemini call (~2s execution) rather than sequential round trips.
+- **Multi-Tier Token Resolution**: Client extracts token across in-memory tokenManager, document cookies, and localStorage, passing `Authorization: Bearer <token>` header so API requests never drop authentication even if browser cookies are delayed or unsynced.
+- **Arbeitnow Over Paid Adzuna**: Sourced listings from Arbeitnow's public endpoint with zero API key requirement, generous rate limits, and full ATS descriptions.
+- **Batched Gemini Scoring**: Evaluated all 8-10 candidates against candidate profile in a single JSON-structured Gemini call (~2s execution).
 - **Deduplication in DB**: Matched `source_url` against existing records for `user_id` before inserting into `jobs`, updating existing records if re-discovered.
-- **Graceful Unauthenticated UX**: Protected route returns 401 and UI surfaces a clear alert prompting the user to log in to search and save jobs to their pipeline.
 
 ## Problems solved
 
+- **401 Unauthorized When Logged In**:
+  - Resolved session disconnect by having `FindJobsView.tsx` pass `Authorization: Bearer <token>` and auto-syncing `document.cookie` if stored in SDK memory/localStorage. Server `createInsforgeServer` accepts `overrideToken` from the Authorization header.
+- **Sample Jobs Cluttering Results**:
+  - Replaced mock job array with real discovered and saved jobs from InsForge DB.
 - **Next.js 16 Partial Prerendering on /find-jobs**:
   - Avoided uncached dynamic cookie reads during static prerendering by keeping the page statically rendered while delegating authenticated search and dynamic discovery to the client coordinator and API route.
-- **Clean ESLint 9 Compliance**:
-  - Removed unused eslint-disable comment in `agent/job-discovery.ts` to ensure 0 errors and 0 warnings.
 
 ## Current state
 

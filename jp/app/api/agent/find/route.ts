@@ -7,11 +7,21 @@ export async function POST(req: NextRequest) {
     const authHeader = req.headers.get("authorization");
     const bearerToken = authHeader ? authHeader.replace(/^Bearer\s+/i, "").trim() : undefined;
 
-    const insforge = await createInsforgeServer(bearerToken);
-    const {
+    let insforge = await createInsforgeServer(bearerToken);
+    let {
       data: authData,
       error: authError,
     } = await insforge.auth.getCurrentUser();
+
+    // If initial verification failed (e.g. stale bearer token), fallback to server session cookies
+    if ((authError || !authData?.user) && bearerToken) {
+      insforge = await createInsforgeServer();
+      const retryResult = await insforge.auth.getCurrentUser();
+      if (retryResult.data?.user) {
+        authData = retryResult.data;
+        authError = null;
+      }
+    }
 
     if (authError || !authData?.user) {
       console.warn("[api/agent/find POST] Auth verification failed:", authError?.message || "No user session");
@@ -55,11 +65,20 @@ export async function GET(req: NextRequest) {
     const authHeader = req.headers.get("authorization");
     const bearerToken = authHeader ? authHeader.replace(/^Bearer\s+/i, "").trim() : undefined;
 
-    const insforge = await createInsforgeServer(bearerToken);
-    const {
+    let insforge = await createInsforgeServer(bearerToken);
+    let {
       data: authData,
       error: authError,
     } = await insforge.auth.getCurrentUser();
+
+    if ((authError || !authData?.user) && bearerToken) {
+      insforge = await createInsforgeServer();
+      const retryResult = await insforge.auth.getCurrentUser();
+      if (retryResult.data?.user) {
+        authData = retryResult.data;
+        authError = null;
+      }
+    }
 
     if (authError || !authData?.user) {
       return NextResponse.json({ success: true, jobs: [] });

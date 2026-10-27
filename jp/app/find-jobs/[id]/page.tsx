@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { Navbar } from "@/components/layout/Navbar";
 import { JobHeader } from "@/components/job-details/JobHeader";
 import { JobMetrics } from "@/components/job-details/JobMetrics";
@@ -18,6 +19,7 @@ interface PageProps {
 }
 
 async function fetchJob(id: string): Promise<Job | null> {
+  await connection();
   try {
     const insforge = await createInsforgeServer();
     const { data, error } = await insforge.database
@@ -179,6 +181,7 @@ function JobDetailsSkeleton() {
 }
 
 async function JobDetailsContent({ paramsPromise }: { paramsPromise: Promise<{ id: string }> }) {
+  await connection();
   const { id } = await paramsPromise;
   const job = await fetchJob(id);
 
@@ -224,8 +227,12 @@ async function JobDetailsContent({ paramsPromise }: { paramsPromise: Promise<{ i
         benefits={job.benefits}
       />
 
-      {/* 6. Company Research Card (Empty state placeholder for Feature 13) */}
-      <CompanyResearchCard company={job.company} />
+      {/* 6. Company Research Card (Feature 13 Agent Integration) */}
+      <CompanyResearchCard
+        jobId={job.id}
+        company={job.company}
+        initialResearch={job.company_research}
+      />
 
       {/* 7. Bottom Full-width Apply Button */}
       <ApplyButton company={job.company} applyUrl={applyUrl} />

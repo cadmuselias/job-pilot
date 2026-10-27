@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { Navbar } from "@/components/layout/Navbar";
 import { CompletionIndicator } from "@/components/profile/CompletionIndicator";
 import { ProfileView } from "@/components/profile/ProfileView";
@@ -52,6 +53,7 @@ function ProfileSkeleton() {
 }
 
 async function ProfileContent() {
+  await connection();
   const insforge = await createInsforgeServer();
   const { data: authData } = await insforge.auth.getCurrentUser();
   const user = authData?.user;

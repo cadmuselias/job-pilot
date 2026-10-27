@@ -370,7 +370,7 @@ Last updated: 2026-10-24
 ### FindJobsView
 
 File: `components/find-jobs/FindJobsView.tsx`
-Last updated: 2026-10-25
+Last updated: 2026-10-26
 
 | Property | Class |
 |---|---|
@@ -388,6 +388,7 @@ Last updated: 2026-10-25
 - View coordinator managing live job discovery requests, search filters, match thresholds, sorting, and pagination.
 - Renders contextual error notification banner when unauthenticated or on network failure, with an inline "Log In" direct action redirecting to `/login?returnTo=/find-jobs`.
 - Automatically loads saved database pipeline on initial mount and replaces table results upon new search execution.
+- Integrates proactive token retrieval via `getToken()` and automatic single-retry on 401 with refreshed credentials.
 
 ---
 
@@ -442,7 +443,7 @@ Last updated: 2026-10-25
 ### JobHeader
 
 File: `components/job-details/JobHeader.tsx`
-Last updated: 2026-10-25
+Last updated: 2026-10-26
 
 | Property | Class |
 |---|---|
@@ -457,9 +458,9 @@ Last updated: 2026-10-25
 | Accent usage | None directly; uses `bg-success-lightest` / `text-success-foreground` for match score badge |
 
 **Pattern notes:**
-- Header card with left-hand company building square icon (`w-14 h-14 rounded-2xl`), bold title, company name, dot separator, and pill match score badge.
-- Right-hand external action button linking to `redirect_url` with `ExternalLink` icon.
-- Top navigation link with `ChevronLeft` returning to `/find-jobs`.
+- Header card with left-hand company building square icon (`w-14 h-14 rounded-2xl bg-surface-secondary border border-border-light`), bold title (`text-2xl font-bold text-text-primary`), company name, dot separator, and pill match score badge (`bg-success-lightest text-success-foreground border border-success-light/60`).
+- Right-hand external action button linking to `redirect_url` with `ExternalLink` icon and `shadow-2xs`.
+- Top navigation link with `ChevronLeft` returning to `/find-jobs`. Smooth color transitions with `group` and `hover:text-text-primary`.
 
 ---
 
@@ -557,22 +558,25 @@ Last updated: 2026-10-25
 ### CompanyResearchCard
 
 File: `components/job-details/CompanyResearchCard.tsx`
-Last updated: 2026-10-25
+Last updated: 2026-10-26
 
 | Property | Class |
 |---|---|
-| Background | `bg-surface` (card), `bg-accent-muted` (header icon), `bg-accent hover:bg-accent-dark` (button), `bg-surface-secondary` (empty icon box) |
-| Border | `border-border` (card), `border-border-light` (empty icon box) |
-| Border radius | `rounded-2xl` (card), `rounded-lg` (button & header icon), `rounded-xl` (empty icon box) |
-| Text — primary | `text-text-primary` (`text-base font-semibold` title, `text-sm font-semibold` empty title), `text-white` (button) |
-| Text — secondary | `text-text-secondary` (`text-xs max-w-sm` description), `text-text-muted` (empty icon) |
-| Spacing | `p-6` (card), `mb-8` (header spacing), `py-6 sm:py-8` (empty state), `px-4 py-2` (button), `mb-3` |
-| Hover state | `hover:bg-accent-dark` (button) |
-| Shadow | `shadow-xs` (card & button) |
-| Accent usage | `bg-accent hover:bg-accent-dark text-white` (Research Company button), `bg-accent-muted text-accent` (header icon) |
+| Background | `bg-surface` (card), `bg-accent-muted` (header icon), `bg-accent hover:bg-accent-dark` (primary CTA button), `bg-surface-secondary` (sub-sections, pills, badges), `bg-accent-muted/60` (Your Edge callout container), `bg-error/10` (error banner) |
+| Border | `border-border` (card container & tech pills), `border-border-light` (sub-sections), `border-accent/25` (Your Edge callout), `border-success-light` (Active Dossier badge), `border-error/20` (error banner) |
+| Border radius | `rounded-2xl` (card container), `rounded-xl` (callout card, overview box, empty state, error banner), `rounded-lg` (header icon, buttons, Q&A blocks), `rounded-md` (tech pills), `rounded-full` (badges & bullets) |
+| Text — primary | `text-text-primary` (`text-base font-semibold` header, `text-sm` body), `text-white` (primary button), `text-error` (error banner) |
+| Text — secondary | `text-text-secondary` (`text-xs` section labels, sub-bullets), `text-text-muted` (sources, sub-labels) |
+| Spacing | `p-6` (card padding), `mb-6 pb-4` (header boundary), `space-y-6` (dossier sections), `gap-1.5` (tech pills), `gap-2` (Q&A and bullet rows), `p-3.5` (error banner) |
+| Hover state | `hover:bg-accent-dark` (primary CTA), `hover:bg-surface-secondary` (refresh button), `hover:text-error/80` (retry link) |
+| Shadow | `shadow-xs` (card & primary button), `shadow-2xs` (sub-cards, callouts) |
+| Accent usage | `bg-accent hover:bg-accent-dark text-white` (Research Company button), `bg-accent-muted text-accent` (header icon, loading spinner), `bg-accent-muted/60 border-accent/25 text-accent` (Your Edge highlighted card), `bg-success-lightest text-success-foreground` (Active Dossier badge) |
 
 **Pattern notes:**
-- Company research card establishing empty state with centered icon, copy, and action button ready for Feature 13 agent integration.
+- Complete 9-field company intelligence briefing renderer: Company Overview, Technologies & Platform pills, Your Competitive Edge highlight callout, Why This Role, Culture & Norms, Gaps Reframed as Strategy, High-Signal Interview Questions, Preparation Topics, and Verified Web Sources.
+- Multi-state transitions: Empty state with call-to-action → active cloud-session investigation loader with animated step progression → rich 9-field structured briefing with secondary "Refresh Dossier" option.
+- Error banner strictly adheres to design tokens (`bg-error/10 border-error/20 text-error hover:text-error/80`) with an inline Retry trigger.
+- Integrates transparent auth token refresh and automatic single-retry upon 401 unauthenticated status.
 
 ---
 
@@ -617,5 +621,332 @@ Last updated: 2026-10-25
 **Pattern notes:**
 - Centered single-column layout (`max-w-[860px]`) with vertical stacking (`space-y-6`) matching `context/designs/job-details.png`.
 - Implements Next.js 16 Partial Prerendering with `<Suspense fallback={<JobDetailsSkeleton />}>` for zero layout shift during async server data streaming.
+
+---
+
+### StatCardGrid
+
+File: `components/dashboard/StatCardGrid.tsx`
+Last updated: 2026-10-26
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (card), `bg-success-lightest` (trend pill) |
+| Border | `border-border` (card), `hover:border-border-muted` |
+| Border radius | `rounded-2xl` (card), `rounded-sm` (trend pill) |
+| Text — primary | `text-text-primary` (`text-3xl sm:text-[32px] font-bold`) |
+| Text — secondary | `text-text-secondary` (`text-sm font-medium` label), `text-text-muted` (`text-xs`), `text-success-darker` (`text-xs font-medium` trend) |
+| Spacing | `p-6` (card), `px-2 py-0.5` (trend pill), `gap-6` (grid) |
+| Hover state | `hover:border-border-muted transition-all` |
+| Shadow | `shadow-xs` |
+| Accent usage | `bg-success-lightest text-success-darker` (trend indicators) |
+
+**Pattern notes:**
+- 4-column metric grid (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6`) displaying numerical stats, trend badges, and contextual subtitles.
+
+---
+
+### RecentActivityCard
+
+File: `components/dashboard/RecentActivityCard.tsx`
+Last updated: 2026-10-26
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (card), `bg-info-lightest` / `bg-success-lightest` / `bg-accent-muted` (node rings) |
+| Border | `border-border` (card), `w-[1.5px] bg-border-light` (timeline line) |
+| Border radius | `rounded-2xl` (card), `rounded-full` (status nodes & inner dots) |
+| Text — primary | `text-text-primary` (`text-base font-semibold` title, `text-sm font-medium` activity item) |
+| Text — secondary | `text-text-muted` (`text-xs` timestamps) |
+| Spacing | `p-6` (card), `space-y-6` (timeline items), `gap-4` (flex items) |
+| Hover state | None |
+| Shadow | `shadow-xs` |
+| Node styling | Ring-4 with inner dot: purple (`bg-accent ring-accent-light`), blue (`bg-info ring-info-light`), green (`bg-success-alt ring-success-light`) |
+
+**Pattern notes:**
+- Vertical timeline component with continuous connecting vertical line (`w-[1.5px] bg-border-light`) connecting multi-colored status nodes.
+
+---
+
+### CompanyResearchChart
+
+File: `components/dashboard/CompanyResearchChart.tsx`
+Last updated: 2026-10-26
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (card), `bg-info-lightest` (active tooltip badge) |
+| Border | `border-border` (card), `stroke="var(--color-border)" stroke-dasharray="4 4"` (gridlines) |
+| Border radius | `rounded-2xl` (card), `rx={4}` (rounded bar tops), `rounded-full` (tooltip badge) |
+| Text — primary | `text-text-primary` (`text-base font-semibold` title, `fill-text-primary font-semibold` active axis) |
+| Text — secondary | `fill-text-muted text-[12px]` (axis ticks), `text-info` (tooltip badge) |
+| Spacing | `p-6` (card), `h-[240px]` (chart area) |
+| Hover state | Dynamic bar color transition (`var(--color-info-medium)`), interactive hover pill |
+| Shadow | `shadow-xs` |
+| Accent usage | `var(--color-info)` (bars), `var(--color-info-medium)` (hovered bar) |
+
+**Pattern notes:**
+- Responsive SVG bar chart with horizontal dashed gridlines (Y-axis 0-12) and Mon-Sun weekly distribution.
+
+---
+
+### JobsOverTimeChart
+
+File: `components/dashboard/JobsOverTimeChart.tsx`
+Last updated: 2026-10-26
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (card), `bg-accent-muted` (tooltip badge) |
+| Border | `border-border` (card), `stroke="var(--color-border)" stroke-dasharray="4 4"` (gridlines) |
+| Border radius | `rounded-2xl` (card), `rounded-full` (tooltip badge) |
+| Text — primary | `text-text-primary` (`text-base font-semibold` title, `fill-text-primary font-semibold` active axis) |
+| Text — secondary | `fill-text-muted text-[12px]` (axis ticks), `text-accent` (tooltip badge) |
+| Spacing | `p-6` (card), `h-[260px]` (chart area) |
+| Hover state | Interactive hover dot (`r={7}` ring, `r={4}` center), dashed guideline, hover badge |
+| Shadow | `shadow-xs` |
+| Accent usage | `stroke="var(--color-accent)"` (3px smooth cubic curve), `fill="url(#jobsCurveGradient)"` (gradient area fill) |
+
+**Pattern notes:**
+- Smooth Catmull-Rom cubic Bezier curve with multi-stop vertical linear gradient area fill below curve.
+
+---
+
+### ScoreDistributionChart
+
+File: `components/dashboard/ScoreDistributionChart.tsx`
+Last updated: 2026-10-26
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (card), `bg-success-lightest` (tooltip badge) |
+| Border | `border-border` (card), `stroke="var(--color-border)" stroke-dasharray="4 4"` (gridlines) |
+| Border radius | `rounded-2xl` (card), `rx={4}` (rounded bar tops), `rounded-full` (tooltip badge) |
+| Text — primary | `text-text-primary` (`text-base font-semibold` title) |
+| Text — secondary | `fill-text-muted text-[12px]` (axis ticks & ranges), `text-success` (tooltip badge) |
+| Spacing | `p-6` (card), `h-[260px]` (chart area) |
+| Hover state | Bar color transition to `var(--color-success-alt)` on hover |
+| Shadow | `shadow-xs` |
+| Accent usage | `var(--color-success)` / `var(--color-success-alt)` (bars) |
+
+**Pattern notes:**
+- 5-bucket distribution bar chart for match score ranges (`50-60%` through `90-100%`) on a 0-100 scale.
+
+---
+
+### IncompleteProfileBanner
+
+File: `components/dashboard/IncompleteProfileBanner.tsx`
+Last updated: 2026-10-26
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (card), `bg-warning/10` (icon box & pill), `bg-overlay-dark hover:bg-black` (button) |
+| Border | `border-warning/30` (card), `border-warning/20` (icon box & pill) |
+| Border radius | `rounded-2xl` (card), `rounded-xl` (icon box), `rounded-full` (pill), `rounded-lg` (button) |
+| Text — primary | `text-text-primary` (`text-sm font-semibold` title), `text-white` (button) |
+| Text — secondary | `text-text-secondary` (`text-xs`), `text-warning` (`text-[11px] font-semibold`), `text-text-muted` (close button) |
+| Spacing | `p-4 sm:p-5` (card), `gap-3.5` (interior), `px-4 py-2` (button) |
+| Hover state | `hover:bg-black` (button), `hover:bg-surface-secondary` (close button) |
+| Shadow | `shadow-xs` |
+| Accent usage | `border-warning/30`, `text-warning`, `bg-warning/10` |
+
+**Pattern notes:**
+- Top alert banner with dismiss trigger and direct action navigation button to `/profile`.
+
+---
+
+### DashboardPage
+
+File: `app/dashboard/page.tsx`
+Last updated: 2026-10-26
+
+| Property | Class |
+|---|---|
+| Background | `bg-background` (full page) |
+| Border | None |
+| Border radius | None |
+| Text — primary | Inherited |
+| Text — secondary | Inherited |
+| Spacing | `max-w-[1440px] w-full mx-auto px-4 sm:px-6 py-8` |
+| Hover state | Inherited from children |
+| Shadow | None |
+| Accent usage | Inherited from children |
+
+**Pattern notes:**
+- Async Server Component with Next.js 16 Partial Prerendering and `<Suspense fallback={<DashboardSkeleton />}>`.
+- Grid arrangement: 4-col stat grid, 2-col middle row (Recent Activity & Company Research), and 12-col bottom row (8-col Jobs Over Time & 4-col Match Score Distribution).
+
+---
+
+### StatCardGrid
+
+File: `components/dashboard/StatCardGrid.tsx`
+Last updated: 2026-10-27
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (card), `bg-success-lightest` (positive trend pill), `bg-error/10` (negative trend pill) |
+| Border | `border-border` (card), `hover:border-border-muted` |
+| Border radius | `rounded-2xl` (card), `rounded-sm` (trend pill) |
+| Text — primary | `text-text-primary` (`text-3xl sm:text-[32px] font-bold tracking-tight`) |
+| Text — secondary | `text-text-secondary` (`text-sm font-medium` label), `text-text-muted` (`text-xs`), `text-success-darker` (positive trend), `text-error` (negative trend) |
+| Spacing | `p-6` (card), `px-2 py-0.5` (trend pill), `gap-6` (grid), `min-h-[22px]` (trend container) |
+| Hover state | `hover:border-border-muted transition-all` |
+| Shadow | `shadow-xs` |
+| Semantic usage | `bg-success-lightest text-success-darker` (positive trend), `bg-error/10 text-error` (negative trend) |
+
+**Pattern notes:**
+- 4-column metric grid (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6`) displaying real user job metrics, trend indicators, and contextual subtitles.
+- Dynamically handles positive and negative deltas with design tokens and renders genuine onboarding zero-states.
+
+---
+
+### DashboardView
+
+File: `components/dashboard/DashboardView.tsx`
+Last updated: 2026-10-27
+
+| Property | Class |
+|---|---|
+| Background | None (layout coordinator) |
+| Border | None |
+| Border radius | None |
+| Text — primary | Inherited |
+| Text — secondary | Inherited |
+| Spacing | `space-y-6` (root container), `gap-6` (card grid rows) |
+| Hover state | Inherited from children |
+| Shadow | None |
+| Accent usage | Inherited from children |
+
+**Pattern notes:**
+- Main dashboard client coordinator managing responsive layout arrangements:
+  - Metric stat grid: 4 columns (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6`).
+  - Middle row: 2 equal-width cards (`grid-cols-1 lg:grid-cols-2 gap-6 items-stretch`).
+  - Bottom row: 12-column split with 8 cols for Jobs Over Time curve chart and 4 cols for Score Distribution bars (`grid-cols-1 lg:grid-cols-12 gap-6 items-stretch`).
+- Conditionally renders `IncompleteProfileBanner` when profile is incomplete.
+
+---
+
+### DashboardSkeleton
+
+File: `components/dashboard/DashboardSkeleton.tsx`
+Last updated: 2026-10-27
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (outer card containers), `bg-surface-secondary` (placeholder bars), `bg-surface-secondary/70`, `bg-surface-secondary/60` (chart bars), `bg-surface-secondary/50`, `bg-surface-secondary/30` |
+| Border | `border-border` (card containers), `border-t border-border/40` (chart footers) |
+| Border radius | `rounded-2xl` (card containers), `rounded-xl` (chart area), `rounded-md` (placeholder text bars), `rounded-t-md` (chart bars), `rounded-full` (timeline dot placeholders) |
+| Text | None (pure pulse placeholder blocks) |
+| Spacing | `space-y-6 animate-pulse`, `p-6` (card containers), `gap-6` (grids), `gap-4` (flex items) |
+| Hover state | None |
+| Shadow | None |
+| Animation | `animate-pulse` with `aria-hidden="true"` |
+
+**Pattern notes:**
+- Exact structural zero-CLS pulse skeleton replicating the complete dashboard grid (4 stat cards, 2 middle cards with timeline and bar heights, 8-col area chart box, and 4-col distribution bars).
+- Used inside `<Suspense fallback={<DashboardSkeleton />}>` on `/dashboard` with Next.js 16 Partial Prerendering.
+
+---
+
+### RecentActivityCard
+
+File: `components/dashboard/RecentActivityCard.tsx`
+Last updated: 2026-10-27
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (card), `bg-info-lightest` (researched outer), `bg-info` (researched inner), `bg-success-lightest` (discovery outer), `bg-success-alt` (discovery inner), `bg-accent-muted` (tailored outer & empty icon), `bg-accent` (tailored inner), `bg-border-light` (timeline line) |
+| Border | `border-border` (card) |
+| Border radius | `rounded-2xl` (card), `rounded-full` (status nodes & empty icon container) |
+| Text — primary | `text-text-primary` (`text-base font-semibold` heading, `text-sm font-medium` activity title) |
+| Text — secondary | `text-text-muted` (`text-xs` relative timestamp, `text-xs` empty state prompt) |
+| Spacing | `p-6` (card), `space-y-6` (timeline list), `gap-4` (timeline items), `py-8` (empty state) |
+| Hover state | `group-hover:text-accent transition-colors` (interactive item link), `hover:text-accent-dark transition-colors` (empty state CTA) |
+| Shadow | `shadow-xs` |
+| Semantic usage | `ring-info-light bg-info-lightest` / `bg-info` (researched), `ring-success-light bg-success-lightest` / `bg-success-alt` (jobs found), `ring-accent-light bg-accent-muted` / `bg-accent` (tailored) |
+
+**Pattern notes:**
+- Connected vertical timeline with continuous line (`absolute left-[7px] top-4 -bottom-6 w-[1.5px] bg-border-light`) and dual-ring semantic status nodes (`w-3.5 h-3.5 rounded-full flex items-center justify-center ring-4`).
+- Interactive titles: links to `/find-jobs/[id]` for researched companies and `/find-jobs` for job search runs with subtle `group-hover:text-accent` feedback.
+- Clean onboarding zero-state with `Clock` icon and direct "Find jobs →" link when zero activity events exist.
+
+---
+
+### CompanyResearchChart
+
+File: `components/dashboard/CompanyResearchChart.tsx`
+Last updated: 2026-10-27
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (card), `bg-info-lightest` (badge pill & empty icon container), `bg-info` (bars), `bg-info-medium` (hovered bars) |
+| Border | `border-border` (card), `border-info-light` (badge pill) |
+| Border radius | `rounded-2xl` (card), `rounded-full` (badge pill & empty icon container), `rx={4} ry={4}` (SVG bars) |
+| Text — primary | `text-text-primary` (`text-base font-semibold` heading, `text-sm font-medium` empty state title) |
+| Text — secondary | `text-text-muted` (`text-xs` empty state prompt), `fill-text-muted` (Y-axis & X-axis labels), `text-info` (`text-xs font-medium` tooltip badge) |
+| Spacing | `p-6` (card), `mb-4` (header), `h-[240px]` (chart area) |
+| Hover state | `fill-text-primary font-semibold` (hovered X label), `var(--color-info-medium)` (hovered bar) |
+| Shadow | `shadow-xs` |
+| Semantic usage | `text-info bg-info-lightest border-info-light` (pill badge), `fill="var(--color-info)"` (bars) |
+
+**Pattern notes:**
+- Custom responsive SVG bar chart for 7-day company research activity.
+- Dynamic Y-axis scale (`Math.max(..., 4)`) with dashed gridlines (`strokeDasharray="4 4" stroke="var(--color-border)"`).
+- Clean in-card zero state with `Building2` icon when total research count is 0.
+
+---
+
+### JobsOverTimeChart
+
+File: `components/dashboard/JobsOverTimeChart.tsx`
+Last updated: 2026-10-27
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (card), `bg-accent-muted` (badge pill & empty icon container) |
+| Border | `border-border` (card), `border-accent/20` (badge pill) |
+| Border radius | `rounded-2xl` (card), `rounded-full` (badge pill, empty icon container, SVG hover points) |
+| Text — primary | `text-text-primary` (`text-base font-semibold` heading, `text-sm font-medium` empty state title) |
+| Text — secondary | `text-text-muted` (`text-xs` empty state prompt), `fill-text-muted` (Y-axis & X-axis labels), `text-accent` (`text-xs font-medium` tooltip badge) |
+| Spacing | `p-6` (card), `mb-4` (header), `h-[260px]` (chart area) |
+| Hover state | `fill-text-primary font-semibold` (hovered X label), `r={5}` active SVG node marker |
+| Shadow | `shadow-xs` |
+| Semantic usage | `stroke="var(--color-accent)"` (bezier curve line), `fill="url(#jobsCurveGradient)"` (subtle gradient area fill) |
+
+**Pattern notes:**
+- Custom responsive SVG area curve chart implementing cubic bezier smoothing (Catmull-Rom tension factor 0.2).
+- Dynamic Y-axis scaling with dashed gridlines and gradient area fill under the curve.
+- Clean in-card zero state with `TrendingUp` icon when discovered jobs count is 0.
+
+---
+
+### ScoreDistributionChart
+
+File: `components/dashboard/ScoreDistributionChart.tsx`
+Last updated: 2026-10-27
+
+| Property | Class |
+|---|---|
+| Background | `bg-surface` (card), `bg-success-lightest` (badge pill & empty icon container), `bg-success` (bars), `bg-success-alt` (hovered bars) |
+| Border | `border-border` (card), `border-success-light` (badge pill) |
+| Border radius | `rounded-2xl` (card), `rounded-full` (badge pill & empty icon container), `rx={4} ry={4}` (SVG bars) |
+| Text — primary | `text-text-primary` (`text-base font-semibold` heading, `text-sm font-medium` empty state title) |
+| Text — secondary | `text-text-muted` (`text-xs` empty state prompt), `fill-text-muted` (Y-axis & X-axis labels), `text-success` (`text-xs font-medium` tooltip badge) |
+| Spacing | `p-6` (card), `mb-4` (header), `h-[260px]` (chart area) |
+| Hover state | `fill-text-primary font-semibold` (hovered X label), `var(--color-success-alt)` (hovered bar) |
+| Shadow | `shadow-xs` |
+| Semantic usage | `text-success bg-success-lightest border-success-light` (pill badge), `fill="var(--color-success)"` (bars) |
+
+**Pattern notes:**
+- Custom responsive SVG distribution histogram for 5 match score tiers (`50–60%`, `60–70%`, `70–80%`, `80–90%`, `90–100%`).
+- Dynamic Y-axis scale with dashed gridlines and rounded bar tops (`rx={4} ry={4}`).
+- Clean in-card zero state with `BarChart3` icon when scored jobs count is 0.
+
+
+
+
+
 
 

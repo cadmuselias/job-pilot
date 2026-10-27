@@ -85,6 +85,18 @@ export interface AgentRun {
   completed_at: string | null;
 }
 
+export interface CompanyResearchDossier {
+  companyOverview: string;
+  techStack: string[];
+  culture: string[];
+  whyThisRole: string;
+  yourEdge: string[];
+  gapsToAddress: string[];
+  smartQuestions: string[];
+  interviewPrep: string[];
+  sources: string[];
+}
+
 export interface Job {
   id: string;
   run_id: string | null;
@@ -107,7 +119,7 @@ export interface Job {
   match_reason: string | null;
   matched_skills: string[];
   missing_skills: string[];
-  company_research: Record<string, unknown> | null;
+  company_research: CompanyResearchDossier | null;
   found_at: string;
 }
 

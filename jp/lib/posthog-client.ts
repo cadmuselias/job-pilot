@@ -14,6 +14,8 @@ export function initPostHog() {
         capture_pageview: false, // manual pageview tracking per project standards
         autocapture: false,
         disable_session_recording: true,
+        disable_surveys: true,
+        capture_performance: false,
         capture_dead_clicks: false,
         disable_external_dependency_loading: true,
       });

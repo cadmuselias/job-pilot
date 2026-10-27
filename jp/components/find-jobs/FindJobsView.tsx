@@ -12,7 +12,7 @@ import {
 } from "./JobFilters";
 import { JobsTable } from "./JobsTable";
 import { JobsPagination } from "./JobsPagination";
-import { insforge } from "@/lib/insforge-client";
+import { useAuth } from "@/components/auth/AuthProvider";
 import type { MockJob } from "./mock-data";
 import type { Job } from "@/types";
 
@@ -33,67 +33,8 @@ function formatRelativeDate(isoDateString?: string): string {
   return new Date(isoDateString).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-/**
- * Robust token resolver that checks in-memory client, document cookies,
- * and localStorage, keeping credentials synchronized across browser boundaries.
- */
-function getActiveAuthToken(): string | null {
-  if (typeof window === "undefined") return null;
-
-  // 1. Check in-memory InsForge client
-  const clientAny = insforge as unknown as {
-    tokenManager?: {
-      getAccessToken?: () => string | null;
-      getSession?: () => { accessToken?: string } | null;
-    };
-  };
-
-  let token =
-    clientAny.tokenManager?.getAccessToken?.() ||
-    clientAny.tokenManager?.getSession?.()?.accessToken ||
-    null;
-
-  // 2. Check document.cookie
-  if (!token && typeof document !== "undefined") {
-    const match = document.cookie.match(new RegExp("(^|;\\s*)insforge_access_token=([^;]*)"));
-    if (match) token = decodeURIComponent(match[2]);
-  }
-
-  // 3. Fallback scan across localStorage for persisted session tokens
-  if (!token) {
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (key.includes("insforge") || key.includes("token") || key.includes("auth"))) {
-          const raw = localStorage.getItem(key);
-          if (raw) {
-            if (raw.startsWith("eyJ")) {
-              token = raw;
-              break;
-            }
-            try {
-              const parsed = JSON.parse(raw);
-              if (parsed?.accessToken) {
-                token = parsed.accessToken;
-                break;
-              }
-            } catch {}
-          }
-        }
-      }
-    } catch {}
-  }
-
-  // Ensure cookie is synchronized if token exists
-  if (token && typeof document !== "undefined") {
-    const secure = window.location.protocol === "https:" ? "; Secure" : "";
-    document.cookie = `insforge_access_token=${encodeURIComponent(token)}; path=/; max-age=604800; SameSite=Lax${secure}`;
-  }
-
-  return token;
-}
-
 export function FindJobsView({ initialJobs = [] }: FindJobsViewProps) {
+  const { getToken, refreshUser } = useAuth();
   const [jobs, setJobs] = useState<MockJob[]>(initialJobs);
   const [filterQuery, setFilterQuery] = useState("");
   const [matchFilter, setMatchFilter] = useState<MatchFilterOption>("all");
@@ -116,13 +57,16 @@ export function FindJobsView({ initialJobs = [] }: FindJobsViewProps) {
     let isMounted = true;
     async function fetchSavedJobs() {
       try {
-        const token = getActiveAuthToken();
+        const token = await getToken();
         const headers: Record<string, string> = {};
         if (token) {
           headers["Authorization"] = `Bearer ${token}`;
         }
 
-        const res = await fetch("/api/agent/find", { headers });
+        const res = await fetch("/api/agent/find", {
+          headers,
+          credentials: "include",
+        });
         if (!res.ok) return;
 
         const data = await res.json();
@@ -151,7 +95,7 @@ export function FindJobsView({ initialJobs = [] }: FindJobsViewProps) {
     return () => {
       isMounted = false;
     };
-  }, [initialJobs.length]);
+  }, [initialJobs.length, getToken]);
 
   // Compute live counts across the full loaded dataset
   const counts = useMemo<MatchCounts>(() => {
@@ -240,7 +184,7 @@ export function FindJobsView({ initialJobs = [] }: FindJobsViewProps) {
     setSearchError(null);
 
     try {
-      const token = getActiveAuthToken();
+      let token = await getToken();
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
@@ -248,14 +192,34 @@ export function FindJobsView({ initialJobs = [] }: FindJobsViewProps) {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
-      const res = await fetch("/api/agent/find", {
+      let res = await fetch("/api/agent/find", {
         method: "POST",
         headers,
+        credentials: "include",
         body: JSON.stringify({
           jobTitle: title,
           location,
         }),
       });
+
+      // If 401 received, attempt session refresh and retry once before failing
+      if (res.status === 401) {
+        await refreshUser();
+        const freshToken = await getToken();
+        if (freshToken) {
+          token = freshToken;
+          headers["Authorization"] = `Bearer ${freshToken}`;
+          res = await fetch("/api/agent/find", {
+            method: "POST",
+            headers,
+            credentials: "include",
+            body: JSON.stringify({
+              jobTitle: title,
+              location,
+            }),
+          });
+        }
+      }
 
       const data = await res.json();
 

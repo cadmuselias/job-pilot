@@ -30,9 +30,28 @@ type AuthContextType = {
   ) => Promise<void>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<UserSchema | null>;
+  getToken: () => Promise<string | null>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+function isJwtExpired(token: string | null | undefined, leewaySeconds = 45): boolean {
+  if (!token) return true;
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return true;
+    const normalized = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(
+      normalized.length + ((4 - (normalized.length % 4)) % 4),
+      "="
+    );
+    const payload = JSON.parse(atob(padded));
+    if (typeof payload.exp !== "number") return false;
+    return payload.exp * 1000 <= Date.now() + leewaySeconds * 1000;
+  } catch {
+    return true;
+  }
+}
 
 function getAuthCookie(): string | null {
   if (typeof document === "undefined") return null;
@@ -119,8 +138,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         activeToken = cookieToken;
       }
 
-      // If we have an active token, fetch user directly from backend sessions endpoint
-      if (activeToken) {
+      // If we have an active non-expired token, verify directly from backend
+      if (activeToken && !isJwtExpired(activeToken, 30)) {
         try {
           const baseUrl = process.env.NEXT_PUBLIC_INSFORGE_URL;
           const anonKey = process.env.NEXT_PUBLIC_INSFORGE_ANON_KEY;
@@ -144,18 +163,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setUser(u);
               return u;
             }
-          } else if (res.status === 401) {
-            // Token is explicitly expired or invalid
-            resetPostHog();
-            setUser(null);
-            syncAuthCookie(null);
-            return null;
           }
         } catch (fetchErr) {
           console.warn("[AuthProvider] Session verification network issue:", fetchErr);
         }
       }
 
+      // If token is missing, expired, or failed verification, attempt session refresh
+      try {
+        const { data: refreshData } = await insforge.auth.refreshSession();
+        if (refreshData?.accessToken && refreshData.user) {
+          clientAny.tokenManager?.saveSession?.({
+            accessToken: refreshData.accessToken,
+            user: refreshData.user,
+          });
+          insforge.setAccessToken(refreshData.accessToken);
+          syncAuthCookie(refreshData.accessToken);
+          identifyUser(refreshData.user);
+          setUser(refreshData.user);
+          return refreshData.user;
+        }
+      } catch (refErr) {
+        console.warn("[AuthProvider] refreshSession attempt failed:", refErr);
+      }
+
+      // Fallback: getCurrentUser
       const { data, error } = await insforge.auth.getCurrentUser();
 
       if (data?.user) {
@@ -175,7 +207,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Only clear cookie if server explicitly returned an unauthorized error
-      // or if there is no token anywhere.
+      // and refresh token could not renew the session.
       const isExplicitUnauthorized =
         error &&
         (error.statusCode === 401 ||
@@ -196,6 +228,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     }
   }, [identifyUser, resetPostHog]);
+
+  const getToken = useCallback(async (): Promise<string | null> => {
+    const clientAny = insforge as unknown as {
+      tokenManager?: {
+        getAccessToken?: () => string | null;
+        getSession?: () => { accessToken?: string } | null;
+      };
+    };
+
+    let token =
+      clientAny.tokenManager?.getAccessToken?.() ||
+      clientAny.tokenManager?.getSession?.()?.accessToken ||
+      null;
+
+    if (!token) {
+      token = getAuthCookie();
+      if (token) {
+        insforge.setAccessToken(token);
+      }
+    }
+
+    if (token && !isJwtExpired(token, 45)) {
+      return token;
+    }
+
+    // Token missing or expired: perform refresh
+    try {
+      const { data } = await insforge.auth.refreshSession();
+      if (data?.accessToken) {
+        insforge.setAccessToken(data.accessToken);
+        syncAuthCookie(data.accessToken);
+        if (data.user) {
+          setUser(data.user);
+          identifyUser(data.user);
+        }
+        return data.accessToken;
+      }
+    } catch (refErr) {
+      console.warn("[AuthProvider] Session refresh in getToken failed:", refErr);
+    }
+
+    // Fallback: getCurrentUser
+    try {
+      const { data } = await insforge.auth.getCurrentUser();
+      if (data?.user) {
+        const refreshedToken =
+          clientAny.tokenManager?.getAccessToken?.() ||
+          clientAny.tokenManager?.getSession?.()?.accessToken ||
+          getAuthCookie();
+        if (refreshedToken) {
+          syncAuthCookie(refreshedToken);
+          return refreshedToken;
+        }
+      }
+    } catch {}
+
+    return token && !isJwtExpired(token, 0) ? token : null;
+  }, [identifyUser]);
 
   useEffect(() => {
     let isMounted = true;
@@ -263,6 +353,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInWithOAuth,
         signOut,
         refreshUser,
+        getToken,
       }}
     >
       {children}
